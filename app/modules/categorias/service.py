@@ -15,7 +15,7 @@ Regla de imports:
 from fastapi import HTTPException, status
 
 from app.core.uow import UnitOfWork
-from app.modules.categorias.model import Categoria, CategoriaCreate, CategoriaUpdate
+from app.modules.categorias.model import Categoria, CategoriaCreate, CategoriaUpdate, CategoriaPublic
 
 
 class CategoriaService:
@@ -24,11 +24,13 @@ class CategoriaService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    def list_all(self) -> list[Categoria]:
+    def list_all(self) -> list["CategoriaPublic"]:
         """Lista todas las categorías."""
-        return self.uow.categorias.get_all()
+        categorias = self.uow.categorias.get_all()
+        # Convertir a esquemas públicos para serialización
+        return [CategoriaPublic.model_validate(c) for c in categorias]
 
-    def get_by_id(self, categoria_id: int) -> Categoria:
+    def get_by_id(self, categoria_id: int) -> CategoriaPublic:
         """Obtiene una categoría por ID o lanza 404."""
         categoria = self.uow.categorias.get_by_id(categoria_id)
         if not categoria:
@@ -36,9 +38,9 @@ class CategoriaService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Categoría no encontrada",
             )
-        return categoria
+        return CategoriaPublic.model_validate(categoria)
 
-    def create(self, cat_in: CategoriaCreate) -> Categoria:
+    def create(self, cat_in: CategoriaCreate) -> CategoriaPublic:
         """Crea una nueva categoría. Nombre debe ser único."""
         if self.uow.categorias.get_by_nombre(cat_in.nombre):
             raise HTTPException(
@@ -47,9 +49,10 @@ class CategoriaService:
             )
 
         categoria = Categoria.model_validate(cat_in)
-        return self.uow.categorias.add(categoria)
+        created = self.uow.categorias.add(categoria)
+        return CategoriaPublic.model_validate(created)
 
-    def update(self, categoria_id: int, cat_in: CategoriaUpdate) -> Categoria:
+    def update(self, categoria_id: int, cat_in: CategoriaUpdate) -> CategoriaPublic:
         """Actualización parcial de una categoría."""
         categoria = self.uow.categorias.get_by_id(categoria_id)
         if not categoria:
@@ -72,7 +75,8 @@ class CategoriaService:
         for key, value in update_data.items():
             setattr(categoria, key, value)
 
-        return self.uow.categorias.update(categoria)
+        updated = self.uow.categorias.update(categoria)
+        return CategoriaPublic.model_validate(updated)
 
     def delete(self, categoria_id: int) -> None:
         """Elimina una categoría por ID o lanza 404."""

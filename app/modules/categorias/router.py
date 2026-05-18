@@ -22,7 +22,7 @@ from app.modules.usuarios.model import Usuario
 from app.modules.categorias.model import CategoriaCreate, CategoriaUpdate, CategoriaPublic
 from app.modules.categorias.service import CategoriaService
 
-router = APIRouter(prefix="/api/v1/categorias", tags=["categorias"])
+router = APIRouter(prefix="/categorias", tags=["categorias"])
 
 
 @router.get("/", response_model=list[CategoriaPublic])
