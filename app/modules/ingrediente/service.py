@@ -1,13 +1,4 @@
-"""
-Service de Ingrediente — lógica de negocio.
-
-Stateless, orquesta operaciones sobre los repositorios a través del UoW.
-Lanza HTTPException. No hace commit/rollback directamente.
-
-Capa: Service
-Conoce a: UoW, Repository (indirectamente vía UoW)
-NO conoce a: Router
-"""
+"""Service de Ingrediente — lógica de negocio."""
 
 from sqlmodel import select
 

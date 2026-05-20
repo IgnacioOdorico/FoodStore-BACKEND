@@ -1,5 +1,5 @@
 """
-Modelo de Pedidos — Dominio 4 del ERD v5.
+Modelo de Pedidos.
 
 Gestiona las ventas, estados del pedido y detalles de productos comprados.
 """
@@ -56,7 +56,7 @@ class Pedido(SQLModel, table=True):
     detalles: List[DetallePedido] = Relationship(back_populates="pedido")
 
 
-# ─── Esquemas de Intercambio (Schemas) ───────────────────────────────────────
+# Esquemas de Intercambio
 
 class DetallePedidoCreate(SQLModel):
     producto_id: int

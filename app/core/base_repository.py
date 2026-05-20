@@ -1,13 +1,4 @@
-"""
-Repositorio base genérico.
-
-Provee operaciones CRUD fundamentales sobre cualquier modelo SQLModel.
-Cada módulo hereda de BaseRepository[T] y puede agregar queries específicas.
-
-Capa: Repository
-Conoce a: Model, Session
-NO conoce a: Service, Router
-"""
+"""Repositorio base genérico."""
 
 from typing import TypeVar, Generic, Type
 

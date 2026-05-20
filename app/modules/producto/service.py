@@ -1,9 +1,8 @@
 """
 Service de Producto — lógica de negocio.
 
-Adaptado al ERD v5:
-  - Soporte para recetas (ProductoIngrediente con cantidad).
-  - Gestión de imagen_url (VARCHAR).
+Soporte para recetas (ProductoIngrediente con cantidad).
+Gestión de imagen_url (VARCHAR).
 """
 
 from datetime import datetime, timezone

@@ -1,5 +1,5 @@
 """
-Script de seed completo — FoodStore (ERD v5).
+Script de seed completo — FoodStore.
 
 Carga:
   1. Roles (ADMIN, STOCK, PEDIDOS, CLIENT)
@@ -28,7 +28,7 @@ from app.modules.pedidos.models import Pedido, DetallePedido
 
 
 def run() -> None:
-    print("🚀 Iniciando Sembrado de Datos (FoodStore ERD v5)...")
+    print("Iniciando Sembrado de Datos FoodStore...")
     create_all_tables()
 
     with Session(engine) as session:

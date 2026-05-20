@@ -1,7 +1,6 @@
 """
 Modelo de Categoría — tabla 'categoria' en PostgreSQL.
 
-Adaptado al ERD v5:
   - Soporte para categorías jerárquicas (parent_id).
 """
 
@@ -42,7 +41,7 @@ class Categoria(SQLModel, table=True):
     )
 
 
-# ─── Esquemas Pydantic ───────────────────────────────────────────────────────
+# Esquemas Pydantic
 
 class CategoriaCreate(SQLModel):
     nombre:      str = Field(min_length=1, max_length=50)

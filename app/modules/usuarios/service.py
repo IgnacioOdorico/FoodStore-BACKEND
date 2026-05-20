@@ -2,7 +2,7 @@
 Service de Usuario — lógica de negocio.
 
 Orquesta operaciones sobre los repositorios a través del UoW.
-Implementa registro, autenticación y gestión de roles según ERD v5.
+Implementa registro, autenticación y gestión de roles.
 """
 
 from datetime import datetime, timezone

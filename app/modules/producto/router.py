@@ -1,13 +1,4 @@
-"""
-Router CRUD de Productos.
-
-HTTP puro: parsear request, validar schema Pydantic, delegar al Service,
-serializar response con response_model. No contiene lógica de negocio.
-
-Capa: Router
-Conoce a: Service (vía UoW)
-NO conoce a: Repository, Model (solo esquemas para response_model)
-"""
+"""Router CRUD de Productos."""
 
 from typing import Annotated, List, Optional
 

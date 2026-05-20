@@ -1,10 +1,4 @@
-"""
-Configuración centralizada leída desde variables de entorno.
-
-Adopta el patrón de u_05_v2: variables individuales de PostgreSQL
-con @computed_field para construir DATABASE_URL automáticamente.
-Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
-"""
+"""Configuración centralizada leída desde variables de entorno."""
 
 from pathlib import Path
 
@@ -16,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    # ─── Base de datos (PostgreSQL — patrón u_05_v2) ──────────────────────────
+    # Base de datos
     postgres_user:     str = "postgres"
     postgres_password: str = "password"
     postgres_db:       str = "seguridad_jwt_db"
@@ -24,15 +18,6 @@ class Settings(BaseSettings):
     postgres_port:     int = 5432
 
 
-# @computed_field:
-# Decorador de Pydantic v2 que indica que este atributo calculado
-# debe incluirse en la serialización del modelo (model_dump / JSON),
-# aunque no sea un campo persistido.
-
-# @property:
-# Convierte el método en una propiedad de solo lectura.
-# Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
-# El valor se calcula dinámicamente en cada acceso.
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
@@ -45,7 +30,7 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    # ─── JWT ──────────────────────────────────────────────────────────────────
+    # JWT
     SECRET_KEY: str                    # Obligatorio — sin default. Mínimo 32 chars.
     ALGORITHM:  str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

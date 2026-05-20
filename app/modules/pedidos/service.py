@@ -70,7 +70,7 @@ class PedidoService:
         if not pedido:
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         
-        # Validar estados permitidos según ERD v5
+        # Validar estados permitidos
         ESTADOS_VALIDOS = ["PENDIENTE", "PAGADO", "EN_PREPARACION", "ENVIADO", "ENTREGADO", "CANCELADO"]
         if nuevo_estado not in ESTADOS_VALIDOS:
             raise HTTPException(status_code=400, detail=f"Estado '{nuevo_estado}' no es válido")

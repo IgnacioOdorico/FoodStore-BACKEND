@@ -2,7 +2,7 @@
 Repositorio de Usuario y Roles.
 
 Acceso a BD: queries sin lógica de negocio.
-Implementa búsquedas por email y gestión de roles según ERD v5.
+Implementa búsquedas por email y gestión de roles.
 """
 
 from typing import List, Optional

@@ -1,19 +1,4 @@
-"""
-Unit of Work — gestión de transacción.
-
-Abre la sesión de BD, provee acceso a todos los repositorios,
-hace commit() automático al salir sin excepciones o rollback() si ocurre error.
-
-Capa: UoW
-Conoce a: Repository, Session
-NO conoce a: Service, Router
-
-Uso en Service:
-    with uow:
-        user = uow.usuarios.get_by_username("admin")
-        uow.categorias.add(nueva_categoria)
-    # commit automático al salir del with, rollback si hay excepción
-"""
+"""Unit of Work — gestión de transacción."""
 
 from sqlmodel import Session
 

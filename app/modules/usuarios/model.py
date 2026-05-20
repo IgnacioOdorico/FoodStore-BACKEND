@@ -1,7 +1,6 @@
 """
 Modelos del Dominio 1: Identidad & Acceso.
 
-Cumple con las especificaciones del food_store_erd_v5.svg:
   - Usuario: Datos personales y auditoría.
   - Rol: Catálogo de roles con PK semántica.
   - UsuarioRol: Tabla intermedia con atributos adicionales (RBAC).
@@ -58,7 +57,7 @@ class Rol(SQLModel, table=True):
 class RefreshToken(SQLModel, table=True):
     """
     Persistencia de Refresh Tokens para rotación de sesiones.
-    Sigue el patrón del ERD v5 (token_hash SHA-256).
+    Token hash SHA-256 para rotación de sesiones.
     """
     __tablename__ = "refresh_token"
 
@@ -101,7 +100,7 @@ class Usuario(SQLModel, table=True):
     pedidos:        List["Pedido"] = Relationship(back_populates="usuario")
 
 
-# ─── Esquemas de Intercambio (Schemas / DTOs) ────────────────────────────────
+# Esquemas de Intercambio
 
 class UserCreate(SQLModel):
     """Esquema para registro de nuevos usuarios."""

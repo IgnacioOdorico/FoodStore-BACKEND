@@ -1,13 +1,4 @@
-"""
-Repositorio de Categoría.
-
-Acceso a BD: queries sin lógica de negocio.
-Hereda de BaseRepository[Categoria] y agrega queries específicas.
-
-Capa: Repository
-Conoce a: Model (Categoria), Session
-NO conoce a: Service, Router
-"""
+"""Repositorio de Categoría."""
 
 from sqlmodel import Session, select
 

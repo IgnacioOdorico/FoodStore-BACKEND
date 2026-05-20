@@ -1,7 +1,6 @@
 """
 Modelo de Producto — tabla 'producto' en PostgreSQL.
 
-Adaptado al ERD v5:
   - imagen_url (singular), sin stock_cantidad (se maneja por ingredientes).
 """
 
@@ -42,7 +41,7 @@ class Producto(SQLModel, table=True):
     )
 
 
-# ─── Esquemas Pydantic ───────────────────────────────────────────────────────
+# Esquemas Pydantic
 
 class ProductoCreate(SQLModel):
     nombre:        str = Field(min_length=1, max_length=100)

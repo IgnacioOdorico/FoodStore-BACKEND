@@ -1,9 +1,4 @@
-"""
-Router de autenticación y gestión de usuarios.
-
-Capa: Router
-Adaptado al ERD v5.
-"""
+"""Router de autenticación y gestión de usuarios."""
 
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, status, Response

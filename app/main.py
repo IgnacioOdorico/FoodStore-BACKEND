@@ -1,12 +1,4 @@
-"""
-Entry point de la aplicación FastAPI.
-
-Responsabilidades:
-  - Registrar routers (auth + categorías + productos + ingredientes).
-  - Configurar CORS para consumo desde frontend (React, etc.).
-  - Crear tablas al arrancar (lifespan).
-  - Health check en /health.
-"""
+"""Entry point de la aplicación FastAPI."""
 
 from contextlib import asynccontextmanager
 
@@ -39,7 +31,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ─── CORS (ajustar origins en producción) ────────────────────────────────────
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite / CRA
@@ -48,7 +40,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── Routers ─────────────────────────────────────────────────────────────────
+# Routers
 app.include_router(auth_router)
 app.include_router(categorias_router)
 app.include_router(producto_router)
@@ -56,7 +48,7 @@ app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
 
 
-# ─── Health check ────────────────────────────────────────────────────────────
+# Health check
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok", "version": "1.0.0"}

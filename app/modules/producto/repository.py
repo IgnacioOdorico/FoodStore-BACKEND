@@ -1,13 +1,4 @@
-"""
-Repositorio de Producto.
-
-Acceso a BD: queries sin lógica de negocio.
-Hereda de BaseRepository[Producto] y agrega queries específicas.
-
-Capa: Repository
-Conoce a: Model (Producto), Session
-NO conoce a: Service, Router
-"""
+"""Repositorio de Producto."""
 
 from sqlmodel import Session
 

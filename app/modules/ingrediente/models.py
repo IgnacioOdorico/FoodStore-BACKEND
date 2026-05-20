@@ -1,7 +1,6 @@
 """
 Modelo de Ingrediente — tabla 'ingrediente' en PostgreSQL.
 
-Adaptado al ERD v5:
   - unidad_medida, stock_actual, stock_minimo.
 """
 
@@ -23,8 +22,6 @@ class Ingrediente(SQLModel, table=True):
     stock_actual:  float         = Field(default=0.0) # NUMERIC(12,3)
     stock_minimo:  float         = Field(default=0.0)
     
-    # Podés mantener es_alergeno si lo usás en el front, pero el ERD no lo tiene.
-    # Lo dejaré para no romper lógica existente si la hay.
     es_alergeno:   bool          = Field(default=False)
     
     created_at:    datetime      = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -37,7 +34,7 @@ class Ingrediente(SQLModel, table=True):
     )
 
 
-# ─── Esquemas Pydantic ───────────────────────────────────────────────────────
+# Esquemas Pydantic
 
 class IngredienteCreate(SQLModel):
     nombre:        str = Field(min_length=1, max_length=100)
