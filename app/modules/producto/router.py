@@ -1,22 +1,16 @@
-"""
-Router CRUD de Productos.
-
-HTTP puro: parsear request, validar schema Pydantic, delegar al Service,
-serializar response con response_model. No contiene lógica de negocio.
-
-Capa: Router
-Conoce a: Service (vía UoW)
-NO conoce a: Repository, Model (solo esquemas para response_model)
-"""
-
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.uow import UnitOfWork, get_uow
-from app.core.deps import get_current_active_user
-from app.modules.usuarios.model import Usuario
-from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoReadWithDetails
+from app.core.deps import require_role
+from app.modules.usuarios.model import UserPublic
+from app.modules.producto.schemas import (
+    ProductoCreate,
+    ProductoUpdate,
+    ProductoDisponibilidadUpdate,
+    ProductoReadWithDetails,
+)
 from app.modules.producto.service import ProductoService
 
 router = APIRouter(prefix="/api/v1/productos", tags=["Productos"])
@@ -24,66 +18,81 @@ router = APIRouter(prefix="/api/v1/productos", tags=["Productos"])
 
 @router.get("/", response_model=List[ProductoReadWithDetails])
 def list_productos(
-    nombre: Annotated[Optional[str], Query(description="Filtrar por nombre")] = None,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    nombre: Annotated[Optional[str], Query(description="Búsqueda por texto en nombre")] = None,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
     categoria_id: Annotated[Optional[int], Query(description="Filtrar por categoría")] = None,
-    _user: Annotated[Usuario, Depends(get_current_active_user)] = None,
-    uow: Annotated[UnitOfWork, Depends(get_uow)] = None,
+    skip: Annotated[int, Query(ge=0, description="Paginación: offset")] = 0,
+    limit: Annotated[int, Query(ge=1, le=200, description="Paginación: tamaño página")] = 50,
 ):
     with uow:
-        service = ProductoService(uow)
-        return service.list_productos(nombre=nombre, disponible=disponible, categoria_id=categoria_id)
-
-
-@router.post("/", response_model=ProductoReadWithDetails)
-def create_producto(
-    data: ProductoCreate,
-    _user: Annotated[Usuario, Depends(get_current_active_user)] = None,
-    uow: Annotated[UnitOfWork, Depends(get_uow)] = None,
-):
-    with uow:
-        service = ProductoService(uow)
-        return service.create_producto(data)
+        return ProductoService(uow).list_productos(
+            nombre=nombre,
+            disponible=disponible,
+            categoria_id=categoria_id,
+            skip=skip,
+            limit=limit,
+        )
 
 
 @router.get("/{id}", response_model=ProductoReadWithDetails)
 def get_producto(
     id: int,
-    _user: Annotated[Usuario, Depends(get_current_active_user)] = None,
-    uow: Annotated[UnitOfWork, Depends(get_uow)] = None,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
     with uow:
-        service = ProductoService(uow)
-        producto = service.get_producto(id)
+        producto = ProductoService(uow).get_producto(id)
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return producto
 
 
-@router.put("/{id}", response_model=ProductoReadWithDetails)
+@router.post("/", response_model=ProductoReadWithDetails, status_code=status.HTTP_201_CREATED)
+def create_producto(
+    data: ProductoCreate,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """Solo ADMIN puede crear."""
+    with uow:
+        return ProductoService(uow).create_producto(data)
+
+
+@router.patch("/{id}", response_model=ProductoReadWithDetails)
 def update_producto(
     id: int,
     data: ProductoUpdate,
-    _user: Annotated[Usuario, Depends(get_current_active_user)] = None,
-    uow: Annotated[UnitOfWork, Depends(get_uow)] = None,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """Solo ADMIN puede actualizar."""
     with uow:
-        service = ProductoService(uow)
-        producto = service.update_producto(id, data)
+        producto = ProductoService(uow).update_producto(id, data)
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return producto
 
 
-@router.delete("/{id}")
+@router.patch("/{id}/disponibilidad", response_model=ProductoReadWithDetails)
+def patch_disponibilidad(
+    id: int,
+    data: ProductoDisponibilidadUpdate,
+    _user: Annotated[UserPublic, Depends(require_role(["ADMIN", "STOCK"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """ADMIN o STOCK pueden alternar disponibilidad."""
+    with uow:
+        return ProductoService(uow).set_disponibilidad(id, data.disponible)
+
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_producto(
     id: int,
-    _user: Annotated[Usuario, Depends(get_current_active_user)] = None,
-    uow: Annotated[UnitOfWork, Depends(get_uow)] = None,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    """Soft delete. Solo ADMIN."""
     with uow:
-        service = ProductoService(uow)
-        success = service.delete_producto(id)
+        success = ProductoService(uow).delete_producto(id)
     if not success:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    return {"message": "Producto eliminado"}

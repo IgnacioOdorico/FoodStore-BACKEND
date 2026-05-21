@@ -10,7 +10,7 @@ NO conoce a: Service, Router
 
 Uso en Service:
     with uow:
-        user = uow.usuarios.get_by_username("admin")
+        user = uow.usuarios.get_by_email("admin@foo.com")
         uow.categorias.add(nueva_categoria)
     # commit automático al salir del with, rollback si hay excepción
 """
@@ -19,10 +19,13 @@ from sqlmodel import Session
 
 from app.core.database import engine
 from app.modules.usuarios.repository import UsuarioRepository, RolRepository, UsuarioRolRepository
+from app.modules.direcciones.repository import DireccionRepository
+from app.modules.catalogos.repository import (UnidadMedidaRepository, EstadoPedidoRepository, FormaPagoRepository,)
 from app.modules.categorias.repository import CategoriaRepository
 from app.modules.producto.repository import ProductoRepository
 from app.modules.ingrediente.repository import IngredienteRepository
-from app.modules.pedidos.repository import PedidoRepository, DetallePedidoRepository
+from app.modules.pedidos.repository import (PedidoRepository, DetallePedidoRepository, HistorialEstadoPedidoRepository,)
+from app.modules.pagos.repository import PagoRepository
 
 
 class UnitOfWork:
@@ -41,14 +44,26 @@ class UnitOfWork:
 
     def __enter__(self):
         self.session = Session(engine)
-        self.usuarios = UsuarioRepository(self.session)
-        self.roles = RolRepository(self.session)
+
+        self.usuarios       = UsuarioRepository(self.session)
+        self.roles          = RolRepository(self.session)
         self.usuarios_roles = UsuarioRolRepository(self.session)
-        self.categorias = CategoriaRepository(self.session)
-        self.productos = ProductoRepository(self.session)
-        self.ingredientes = IngredienteRepository(self.session)
-        self.pedidos = PedidoRepository(self.session)
-        self.detalles_pedidos = DetallePedidoRepository(self.session)
+        self.direcciones    = DireccionRepository(self.session)
+
+        self.unidades_medida = UnidadMedidaRepository(self.session)
+        self.estados_pedido  = EstadoPedidoRepository(self.session)
+        self.formas_pago     = FormaPagoRepository(self.session)
+
+        self.categorias    = CategoriaRepository(self.session)
+        self.productos     = ProductoRepository(self.session)
+        self.ingredientes  = IngredienteRepository(self.session)
+
+        self.pedidos            = PedidoRepository(self.session)
+        self.detalles_pedidos   = DetallePedidoRepository(self.session)
+        self.historial_pedidos  = HistorialEstadoPedidoRepository(self.session)
+
+        self.pagos = PagoRepository(self.session)
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

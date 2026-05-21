@@ -1,10 +1,3 @@
-"""
-Repositorio de Usuario y Roles.
-
-Acceso a BD: queries sin lógica de negocio.
-Implementa búsquedas por email y gestión de roles según ERD v5.
-"""
-
 from typing import List, Optional
 from sqlmodel import Session, select
 
@@ -17,7 +10,6 @@ class UsuarioRepository(BaseRepository[Usuario]):
         super().__init__(Usuario, session)
 
     def get_by_email(self, email: str) -> Optional[Usuario]:
-        """Busca un usuario activo por su email."""
         return self.session.exec(
             select(Usuario).where(
                 Usuario.email == email, 
@@ -26,7 +18,6 @@ class UsuarioRepository(BaseRepository[Usuario]):
         ).first()
 
     def get_roles_codes(self, usuario_id: int) -> List[str]:
-        """Retorna la lista de códigos de roles asignados a un usuario."""
         statement = (
             select(Rol.codigo)
             .join(UsuarioRol)

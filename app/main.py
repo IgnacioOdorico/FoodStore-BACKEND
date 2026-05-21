@@ -1,29 +1,22 @@
-"""
-Entry point de la aplicación FastAPI.
-
-Responsabilidades:
-  - Registrar routers (auth + categorías + productos + ingredientes).
-  - Configurar CORS para consumo desde frontend (React, etc.).
-  - Crear tablas al arrancar (lifespan).
-  - Health check en /health.
-"""
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_all_tables
+
 from app.modules.usuarios.router import router as auth_router
+from app.modules.catalogos.router import router as catalogos_router
+from app.modules.direcciones.router import router as direcciones_router
 from app.modules.categorias.router import router as categorias_router
 from app.modules.producto.router import router as producto_router
 from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.pedidos.router import router as pedidos_router
+from app.modules.pagos.router import router as pagos_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Crea las tablas de BD al arrancar la aplicación."""
     try:
         create_all_tables()
     except Exception:
@@ -35,19 +28,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FoodStore API",
-    version="1.0.0",
+    version="2.0.0",
+    description="FoodStore — Backend Parcial 2 (FastAPI + SQLModel) alineado al ERD v6.",
     lifespan=lifespan,
 )
 
-# ─── CORS MIDDLEWARE (DEBE SER EL ÚLTIMO AGREGADO PARA SER EL PRIMERO EN EJECUTARSE) ────
-# En FastAPI, los middlewares se aplican en orden INVERSO (LIFO)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",      # Vite frontend
-        "http://localhost:3000",       # CRA frontend
-        "http://127.0.0.1:5173",       # Vite (127.0.0.1)
-        "http://127.0.0.1:3000",       # CRA (127.0.0.1)
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -56,21 +49,17 @@ app.add_middleware(
     max_age=3600,
 )
 
-# ─── Routers ─────────────────────────────────────────────────────────────────
+
 app.include_router(auth_router)
+app.include_router(catalogos_router)
+app.include_router(direcciones_router)
 app.include_router(categorias_router)
 app.include_router(producto_router)
 app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
+app.include_router(pagos_router)
 
 
-# ─── Health check ────────────────────────────────────────────────────────────
 @app.get("/health", tags=["health"])
 def health():
-    return {"status": "ok", "version": "1.0.0"}
-
-
-@app.get("/test", tags=["test"])
-def test():
-    """Test endpoint - simple response"""
-    return {"message": "Backend is working"}
+    return {"status": "ok", "version": "2.0.0"}

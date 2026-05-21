@@ -1,39 +1,30 @@
-"""
-Service de Categoría — lógica de negocio.
-
-Stateless, orquesta operaciones sobre los repositorios a través del UoW.
-Lanza HTTPException. No hace commit/rollback directamente.
-
-Capa: Service
-Conoce a: UoW, Repository (indirectamente vía UoW)
-NO conoce a: Router
-
-Regla de imports:
-    Router → Service → UoW → Repository → Model
-"""
+from datetime import datetime, timezone
+from typing import List, Optional
 
 from fastapi import HTTPException, status
 
 from app.core.uow import UnitOfWork
-from app.modules.categorias.model import Categoria, CategoriaCreate, CategoriaUpdate, CategoriaPublic
+from app.modules.categorias.model import (
+    Categoria,
+    CategoriaCreate,
+    CategoriaUpdate,
+    CategoriaPublic,
+)
 
 
 class CategoriaService:
-    """Lógica de negocio para CRUD de categorías."""
 
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    def list_all(self) -> list["CategoriaPublic"]:
-        """Lista todas las categorías."""
-        categorias = self.uow.categorias.get_all()
-        # Convertir a esquemas públicos para serialización
+    def list_all(self, parent_id: Optional[int] = None) -> List[CategoriaPublic]:
+        """Lista todas las categorías activas. Filtra por parent_id si se pasa."""
+        categorias = self.uow.categorias.list_active(parent_id=parent_id)
         return [CategoriaPublic.model_validate(c) for c in categorias]
 
     def get_by_id(self, categoria_id: int) -> CategoriaPublic:
-        """Obtiene una categoría por ID o lanza 404."""
         categoria = self.uow.categorias.get_by_id(categoria_id)
-        if not categoria:
+        if not categoria or categoria.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Categoría no encontrada",
@@ -41,7 +32,6 @@ class CategoriaService:
         return CategoriaPublic.model_validate(categoria)
 
     def create(self, cat_in: CategoriaCreate) -> CategoriaPublic:
-        """Crea una nueva categoría. Nombre debe ser único."""
         if self.uow.categorias.get_by_nombre(cat_in.nombre):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -53,9 +43,8 @@ class CategoriaService:
         return CategoriaPublic.model_validate(created)
 
     def update(self, categoria_id: int, cat_in: CategoriaUpdate) -> CategoriaPublic:
-        """Actualización parcial de una categoría."""
         categoria = self.uow.categorias.get_by_id(categoria_id)
-        if not categoria:
+        if not categoria or categoria.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Categoría no encontrada",
@@ -74,16 +63,24 @@ class CategoriaService:
 
         for key, value in update_data.items():
             setattr(categoria, key, value)
+        categoria.updated_at = datetime.now(timezone.utc)
 
         updated = self.uow.categorias.update(categoria)
         return CategoriaPublic.model_validate(updated)
 
     def delete(self, categoria_id: int) -> None:
-        """Elimina una categoría por ID o lanza 404."""
         categoria = self.uow.categorias.get_by_id(categoria_id)
-        if not categoria:
+        if not categoria or categoria.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Categoría no encontrada",
             )
-        self.uow.categorias.delete(categoria)
+
+        if self.uow.categorias.count_productos_activos(categoria_id) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No se puede eliminar: la categoría tiene productos activos asociados",
+            )
+
+        categoria.deleted_at = datetime.now(timezone.utc)
+        self.uow.categorias.update(categoria)

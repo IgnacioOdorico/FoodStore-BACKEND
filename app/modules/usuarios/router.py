@@ -1,10 +1,3 @@
-"""
-Router de autenticación y gestión de usuarios.
-
-Capa: Router
-Adaptado al ERD v5.
-"""
-
 from typing import Annotated, List
 from fastapi import APIRouter, Depends, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -34,10 +27,7 @@ def login(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     response: Response,
 ):
-    """
-    Login estándar OAuth2. 
-    'username' en el formulario debe ser el email del usuario.
-    """
+
     import logging
     logger = logging.getLogger(__name__)
     
@@ -49,15 +39,14 @@ def login(
             # El formulario de FastAPI usa el campo 'username' para el identificador
             token = service.authenticate(form_data.username, form_data.password)
             logger.info(f"[LOGIN] Authentication successful for: {form_data.username}")
-            
-            # Cookie HttpOnly para seguridad (XSS protection)
+
             response.set_cookie(
                 key="access_token",
                 value=token.access_token,
                 httponly=True,
                 max_age=token.expires_in,
                 samesite="lax",
-                secure=False, # True en producción con HTTPS
+                secure=False,
             )
             return {"mensaje": "Login exitoso", "user_email": form_data.username}
     except Exception as e:
@@ -69,7 +58,6 @@ def login(
 
 @router.post("/logout")
 def logout(response: Response):
-    """Cierra la sesión eliminando la cookie."""
     response.delete_cookie(key="access_token", httponly=True, samesite="lax")
     return {"mensaje": "Sesión cerrada"}
 
@@ -78,7 +66,6 @@ def logout(response: Response):
 def read_me(
     current_user: Annotated[UserPublic, Depends(get_current_active_user)],
 ):
-    """Retorna el perfil del usuario autenticado."""
     return current_user
 
 
@@ -87,7 +74,6 @@ def list_users(
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    """Lista todos los usuarios (Solo ADMIN)."""
     with uow:
         service = UsuarioService(uow)
         return service.list_all()
@@ -99,7 +85,6 @@ def delete_user(
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    """Baja lógica de un usuario (Solo ADMIN)."""
     with uow:
         service = UsuarioService(uow)
         return service.delete_user(user_id)
