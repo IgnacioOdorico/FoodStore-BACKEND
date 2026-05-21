@@ -19,7 +19,7 @@ from app.modules.usuarios.model import Usuario
 from app.modules.producto.schemas import ProductoCreate, ProductoUpdate, ProductoReadWithDetails
 from app.modules.producto.service import ProductoService
 
-router = APIRouter(prefix="/productos", tags=["Productos"])
+router = APIRouter(prefix="/api/v1/productos", tags=["Productos"])
 
 
 @router.get("/", response_model=List[ProductoReadWithDetails])

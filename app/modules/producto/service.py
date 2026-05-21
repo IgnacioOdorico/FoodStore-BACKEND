@@ -112,14 +112,35 @@ class ProductoService:
         producto.updated_at = datetime.now(timezone.utc)
 
         if data.categoria_ids is not None:
-            # Limpiar viejas y poner nuevas
-            self.uow.session.exec(select(ProductoCategoria).where(ProductoCategoria.producto_id == id)) # etc
-            # Simplificando para brevedad, idealmente usar repo específico
-            pass 
+            # Limpiar viejas categorías y poner nuevas
+            self.uow.session.exec(
+                select(ProductoCategoria).where(ProductoCategoria.producto_id == id)
+            )
+            # Eliminar categorías viejas
+            for old_cat in self.uow.session.exec(
+                select(ProductoCategoria).where(ProductoCategoria.producto_id == id)
+            ).all():
+                self.uow.session.delete(old_cat)
+            
+            # Agregar nuevas categorías
+            for cat_id in data.categoria_ids:
+                self.uow.session.add(ProductoCategoria(producto_id=id, categoria_id=cat_id))
 
         if data.ingredientes_receta is not None:
-            # Actualizar receta
-            pass
+            # Limpiar viejos ingredientes
+            for old_ing in self.uow.session.exec(
+                select(ProductoIngrediente).where(ProductoIngrediente.producto_id == id)
+            ).all():
+                self.uow.session.delete(old_ing)
+            
+            # Agregar nuevos ingredientes
+            for ing_item in data.ingredientes_receta:
+                self.uow.session.add(ProductoIngrediente(
+                    producto_id=id,
+                    ingrediente_id=ing_item.id,
+                    cantidad=ing_item.cantidad,
+                    es_removible=ing_item.es_removible
+                ))
 
         self.uow.productos.update(producto)
         self.uow.session.commit()

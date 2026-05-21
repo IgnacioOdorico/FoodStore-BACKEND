@@ -4,9 +4,9 @@ from app.core.config import settings
 
 print("Dropping all tables...")
 with engine.connect() as conn:
-    conn.execute(text("DROP TABLE IF EXISTS productoingrediente CASCADE"))
+    conn.execute(text("DROP TABLE IF EXISTS producto_ingrediente CASCADE"))
     conn.execute(text("DROP TABLE IF EXISTS productocategoria CASCADE"))
-    conn.execute(text("DROP TABLE IF EXISTS detallepedido CASCADE"))
+    conn.execute(text("DROP TABLE IF EXISTS detalle_pedido CASCADE"))
     conn.execute(text("DROP TABLE IF EXISTS pedido CASCADE"))
     conn.execute(text("DROP TABLE IF EXISTS producto CASCADE"))
     conn.execute(text("DROP TABLE IF EXISTS ingrediente CASCADE"))

@@ -23,7 +23,7 @@ class Producto(SQLModel, table=True):
     nombre:        str           = Field(index=True, max_length=100, nullable=False)
     descripcion:   Optional[str] = Field(default=None)
     precio_base:   float         = Field(nullable=False) # NUMERIC(12,2)
-    imagen_url:    Optional[str] = Field(default=None, max_length=255)
+    imagen_url:    Optional[str] = Field(default=None, max_length=2000)
     disponible:    bool          = Field(default=True)
     
     # Audit

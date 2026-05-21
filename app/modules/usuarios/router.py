@@ -38,21 +38,33 @@ def login(
     Login estándar OAuth2. 
     'username' en el formulario debe ser el email del usuario.
     """
-    with uow:
-        service = UsuarioService(uow)
-        # El formulario de FastAPI usa el campo 'username' para el identificador
-        token = service.authenticate(form_data.username, form_data.password)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"[LOGIN] Attempting login for: {form_data.username}")
         
-        # Cookie HttpOnly para seguridad (XSS protection)
-        response.set_cookie(
-            key="access_token",
-            value=token.access_token,
-            httponly=True,
-            max_age=token.expires_in,
-            samesite="lax",
-            secure=False, # True en producción con HTTPS
-        )
-        return {"mensaje": "Login exitoso", "user_email": form_data.username}
+        with uow:
+            service = UsuarioService(uow)
+            # El formulario de FastAPI usa el campo 'username' para el identificador
+            token = service.authenticate(form_data.username, form_data.password)
+            logger.info(f"[LOGIN] Authentication successful for: {form_data.username}")
+            
+            # Cookie HttpOnly para seguridad (XSS protection)
+            response.set_cookie(
+                key="access_token",
+                value=token.access_token,
+                httponly=True,
+                max_age=token.expires_in,
+                samesite="lax",
+                secure=False, # True en producción con HTTPS
+            )
+            return {"mensaje": "Login exitoso", "user_email": form_data.username}
+    except Exception as e:
+        import traceback
+        logger.error(f"[LOGIN ERROR] {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 
 @router.post("/logout")

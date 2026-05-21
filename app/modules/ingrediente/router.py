@@ -19,7 +19,7 @@ from app.modules.usuarios.model import Usuario
 from app.modules.ingrediente.schemas import IngredienteCreate, IngredienteUpdate, IngredienteRead
 from app.modules.ingrediente.service import IngredienteService
 
-router = APIRouter(prefix="/ingredientes", tags=["Ingredientes"])
+router = APIRouter(prefix="/api/v1/ingredientes", tags=["Ingredientes"])
 
 
 @router.get("/", response_model=List[IngredienteRead])

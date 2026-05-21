@@ -20,6 +20,7 @@ class Categoria(SQLModel, table=True):
     id:          Optional[int] = Field(default=None, primary_key=True)
     nombre:      str           = Field(index=True, unique=True, max_length=50, nullable=False)
     descripcion: Optional[str] = Field(default=None)
+    imagen_url:  Optional[str] = Field(default=None, max_length=2000)
     
     # Jerarquía (Self-reference)
     parent_id:   Optional[int] = Field(default=None, foreign_key="categoria.id")
@@ -47,6 +48,7 @@ class Categoria(SQLModel, table=True):
 class CategoriaCreate(SQLModel):
     nombre:      str = Field(min_length=1, max_length=50)
     descripcion: Optional[str] = None
+    imagen_url:  Optional[str] = None
     parent_id:   Optional[int] = None
 
 
@@ -54,6 +56,7 @@ class CategoriaUpdate(SQLModel):
     """Schema para PATCH: todos los campos son opcionales."""
     nombre:      Optional[str] = Field(default=None, min_length=1, max_length=50)
     descripcion: Optional[str] = None
+    imagen_url:  Optional[str] = None
     parent_id:   Optional[int] = None
 
 
@@ -61,6 +64,7 @@ class CategoriaPublic(SQLModel):
     id:          int
     nombre:      str
     descripcion: Optional[str]
+    imagen_url:  Optional[str]
     parent_id:   Optional[int]
     created_at:  datetime
     updated_at:  datetime
