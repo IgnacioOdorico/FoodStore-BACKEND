@@ -12,7 +12,8 @@ from fastapi.security import OAuth2PasswordBearer
 
 from app.core.security import decode_access_token
 from app.core.uow import UnitOfWork, get_uow
-from app.modules.usuarios.model import Usuario, UserPublic
+from app.modules.usuarios.model import Usuario
+from app.modules.usuarios.schemas import UserPublic
 from app.modules.usuarios.service import UsuarioService
 
 

@@ -4,8 +4,8 @@ from typing import List, Optional
 from fastapi import HTTPException, status
 
 from app.core.uow import UnitOfWork
-from app.modules.categorias.model import (
-    Categoria,
+from app.modules.categorias.model import Categoria
+from app.modules.categorias.schemas import (
     CategoriaCreate,
     CategoriaUpdate,
     CategoriaPublic,

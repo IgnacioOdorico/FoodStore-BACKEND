@@ -80,28 +80,3 @@ class Usuario(SQLModel, table=True):
     )
     direcciones:    List["DireccionEntrega"] = Relationship(back_populates="usuario")
     historial_pedidos: List["HistorialEstadoPedido"] = Relationship(back_populates="usuario")
-
-
-class UserCreate(SQLModel):
-    nombre:   str
-    apellido: str
-    email:    EmailStr
-    celular:  Optional[str] = None
-    password: str = Field(min_length=8)
-
-
-class UserPublic(SQLModel):
-    id:         int
-    nombre:     str
-    apellido:   str
-    email:      str
-    celular:    Optional[str]
-    roles:      List[str] = [] 
-    created_at: datetime
-
-
-class Token(SQLModel):
-    access_token:  str
-    refresh_token: Optional[str] = None
-    token_type:    str = "bearer"
-    expires_in:    int

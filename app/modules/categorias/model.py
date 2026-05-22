@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 from typing import List, Optional, TYPE_CHECKING
 from sqlmodel import SQLModel, Field, Relationship
-from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from app.modules.producto.models import Producto
@@ -32,29 +31,3 @@ class Categoria(SQLModel, table=True):
         back_populates="categorias",
         link_model=ProductoCategoria
     )
-
-
-class CategoriaCreate(SQLModel):
-    nombre:      str = Field(min_length=1, max_length=100)
-    descripcion: Optional[str] = None
-    imagen_url:  Optional[str] = None
-    parent_id:   Optional[int] = None
-
-
-class CategoriaUpdate(SQLModel):
-    nombre:      Optional[str] = Field(default=None, min_length=1, max_length=100)
-    descripcion: Optional[str] = None
-    imagen_url:  Optional[str] = None
-    parent_id:   Optional[int] = None
-
-
-class CategoriaPublic(SQLModel):
-    id:          int
-    nombre:      str
-    descripcion: Optional[str]
-    imagen_url:  Optional[str]
-    parent_id:   Optional[int]
-    created_at:  datetime
-    updated_at:  datetime
-
-    model_config = ConfigDict(from_attributes=True)

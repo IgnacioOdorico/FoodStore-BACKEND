@@ -49,7 +49,7 @@ class ProductoRead(ProductoBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-from app.modules.categorias.model import CategoriaPublic as CategoriaRead
+from app.modules.categorias.schemas import CategoriaPublic as CategoriaRead
 from app.modules.ingrediente.schemas import IngredienteRead
 
 

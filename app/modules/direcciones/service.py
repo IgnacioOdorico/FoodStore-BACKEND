@@ -4,8 +4,8 @@ from typing import List
 from fastapi import HTTPException, status
 
 from app.core.uow import UnitOfWork
-from app.modules.direcciones.models import (
-    DireccionEntrega,
+from app.modules.direcciones.models import DireccionEntrega
+from app.modules.direcciones.schemas import (
     DireccionCreate,
     DireccionUpdate,
     DireccionPublic,

@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.model import UserPublic
-from app.modules.categorias.model import CategoriaCreate, CategoriaUpdate, CategoriaPublic
+from app.modules.usuarios.schemas import UserPublic
+from app.modules.categorias.schemas import CategoriaCreate, CategoriaUpdate, CategoriaPublic
 from app.modules.categorias.service import CategoriaService
 
 router = APIRouter(prefix="/api/v1/categorias", tags=["categorias"])

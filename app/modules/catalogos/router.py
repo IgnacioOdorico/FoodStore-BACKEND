@@ -3,7 +3,7 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, Query
 
 from app.core.uow import UnitOfWork, get_uow
-from app.modules.catalogos.models import (
+from app.modules.catalogos.schemas import (
     UnidadMedidaPublic,
     EstadoPedidoPublic,
     FormaPagoPublic,

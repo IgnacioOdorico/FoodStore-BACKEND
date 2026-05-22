@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user
-from app.modules.usuarios.model import UserPublic
-from app.modules.pagos.models import (
+from app.modules.usuarios.schemas import UserPublic
+from app.modules.pagos.schemas import (
     PagoCreate,
     PagoPublic,
     PagoWebhookUpdate,

@@ -1,7 +1,7 @@
 from typing import List
 
 from app.core.uow import UnitOfWork
-from app.modules.catalogos.models import (
+from app.modules.catalogos.schemas import (
     UnidadMedidaPublic,
     EstadoPedidoPublic,
     FormaPagoPublic,

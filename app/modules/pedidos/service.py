@@ -8,6 +8,8 @@ from app.modules.pedidos.models import (
     Pedido,
     DetallePedido,
     HistorialEstadoPedido,
+)
+from app.modules.pedidos.schemas import (
     PedidoCreate,
     PedidoPublic,
     DetallePedidoPublic,

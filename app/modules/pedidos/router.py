@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.model import UserPublic
-from app.modules.pedidos.models import (
+from app.modules.usuarios.schemas import UserPublic
+from app.modules.pedidos.schemas import (
     PedidoCreate,
     PedidoPublic,
     AvanzarEstadoRequest,

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import require_role
-from app.modules.usuarios.model import UserPublic
+from app.modules.usuarios.schemas import UserPublic
 from app.modules.producto.schemas import (
     ProductoCreate,
     ProductoUpdate,

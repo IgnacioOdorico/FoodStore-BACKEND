@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import List, Optional, TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
-from pydantic import ConfigDict
 
 if TYPE_CHECKING:
     from app.modules.producto.models import Producto
@@ -22,14 +21,6 @@ class UnidadMedida(SQLModel, table=True):
 
     productos: List["Producto"] = Relationship(back_populates="unidad_venta")
 
-
-class UnidadMedidaPublic(SQLModel):
-    id:      int
-    nombre:  str
-    simbolo: str
-    tipo:    str
-
-    model_config = ConfigDict(from_attributes=True)
 
 class EstadoPedido(SQLModel, table=True):
     """
@@ -53,15 +44,6 @@ class EstadoPedido(SQLModel, table=True):
     pedidos: List["Pedido"] = Relationship(back_populates="estado")
 
 
-class EstadoPedidoPublic(SQLModel):
-    codigo:      str
-    descripcion: str
-    orden:       int
-    es_terminal: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
-
 class FormaPago(SQLModel, table=True):
     """
     Catálogo de formas de pago.
@@ -78,11 +60,3 @@ class FormaPago(SQLModel, table=True):
     habilitado:  bool = Field(default=True, nullable=False)
 
     pedidos: List["Pedido"] = Relationship(back_populates="forma_pago")
-
-
-class FormaPagoPublic(SQLModel):
-    codigo:      str
-    descripcion: str
-    habilitado:  bool
-
-    model_config = ConfigDict(from_attributes=True)

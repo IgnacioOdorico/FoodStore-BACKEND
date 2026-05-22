@@ -4,8 +4,8 @@ from typing import List
 from fastapi import HTTPException, status
 
 from app.core.uow import UnitOfWork
-from app.modules.pagos.models import (
-    Pago,
+from app.modules.pagos.models import Pago
+from app.modules.pagos.schemas import (
     PagoCreate,
     PagoPublic,
     PagoWebhookUpdate,
