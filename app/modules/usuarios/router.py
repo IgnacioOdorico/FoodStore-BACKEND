@@ -103,6 +103,29 @@ def list_users(
         return service.list_all()
 
 
+@router.patch("/admin/usuarios/{user_id}", response_model=UserPublic)
+def update_user(
+    user_id: int,
+    data: UserUpdate,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    with uow:
+        service = UsuarioService(uow)
+        return service.update_user(user_id, data)
+
+
+@router.post("/admin/usuarios/{user_id}/reactivar", response_model=UserPublic)
+def reactivate_user(
+    user_id: int,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    with uow:
+        service = UsuarioService(uow)
+        return service.reactivate_user(user_id)
+
+
 @router.delete("/admin/usuarios/{user_id}", response_model=UserPublic)
 def delete_user(
     user_id: int,

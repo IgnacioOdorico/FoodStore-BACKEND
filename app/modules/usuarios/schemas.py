@@ -21,6 +21,7 @@ class UserPublic(SQLModel):
     celular: Optional[str]
     roles: List[str] = []
     created_at: datetime
+    deleted_at: Optional[datetime] = None
 
 
 class Token(SQLModel):
