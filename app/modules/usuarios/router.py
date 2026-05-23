@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.schemas import UserCreate, UserPublic, Token
+from app.modules.usuarios.schemas import UserCreate, UserPublic, Token, UserUpdate, PasswordChange
 from app.modules.usuarios.service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -68,6 +68,30 @@ def read_me(
 ):
     return current_user
 
+
+
+@router.patch("/me", response_model=UserPublic)
+def update_me(
+    data: UserUpdate,
+    current_user: Annotated[UserPublic, Depends(get_current_active_user)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """Actualiza nombre, apellido y celular del usuario autenticado."""
+    with uow:
+        service = UsuarioService(uow)
+        return service.update_me(current_user.id, data)
+
+
+@router.patch("/me/password", status_code=204)
+def change_password(
+    data: PasswordChange,
+    current_user: Annotated[UserPublic, Depends(get_current_active_user)],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """Cambia la contraseña del usuario autenticado."""
+    with uow:
+        service = UsuarioService(uow)
+        service.change_password(current_user.id, data)
 
 @router.get("/admin/usuarios", response_model=List[UserPublic])
 def list_users(

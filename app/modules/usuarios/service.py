@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.uow import UnitOfWork
 from app.modules.usuarios.model import Usuario, UsuarioRol
-from app.modules.usuarios.schemas import UserCreate, Token, UserPublic
+from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, PasswordChange
 
 
 class UsuarioService:
@@ -97,6 +97,46 @@ class UsuarioService:
         user.deleted_at = datetime.now(timezone.utc)
         updated = self.uow.usuarios.update(user)
         return self._to_public(updated)
+
+
+    def update_me(self, user_id: int, data: UserUpdate) -> UserPublic:
+        """Actualiza los datos del usuario autenticado."""
+        user = self.uow.usuarios.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado",
+            )
+        if data.nombre is not None:
+            user.nombre = data.nombre
+        if data.apellido is not None:
+            user.apellido = data.apellido
+        if data.celular is not None:
+            user.celular = data.celular
+        updated = self.uow.usuarios.update(user)
+        return self._to_public(updated)
+
+
+    def change_password(self, user_id: int, data: PasswordChange) -> None:
+        """Cambia la contraseña del usuario autenticado, verificando la actual."""
+        user = self.uow.usuarios.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado",
+            )
+        if not verify_password(data.password_actual, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual es incorrecta",
+            )
+        if len(data.password_nuevo) < 8:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="La nueva contraseña debe tener al menos 8 caracteres",
+            )
+        user.password_hash = hash_password(data.password_nuevo)
+        self.uow.usuarios.update(user)
 
     def _to_public(self, user: Usuario) -> UserPublic:
         roles = self.uow.usuarios.get_roles_codes(user.id)

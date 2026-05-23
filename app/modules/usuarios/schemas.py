@@ -45,3 +45,13 @@ class UsuarioRolPublic(SQLModel):
     usuario_id: int
     rol_codigo: str
     created_at: datetime
+
+
+class UserUpdate(SQLModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    celular: Optional[str] = None
+
+class PasswordChange(SQLModel):
+    password_actual: str
+    password_nuevo: str
