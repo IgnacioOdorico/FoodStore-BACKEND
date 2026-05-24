@@ -39,19 +39,6 @@ class Rol(SQLModel, table=True):
     usuarios_link: List[UsuarioRol] = Relationship(back_populates="rol")
 
 
-class RefreshToken(SQLModel, table=True):
-
-    __tablename__ = "refresh_token"
-
-    id:          Optional[int] = Field(default=None, primary_key=True)
-    usuario_id:  int           = Field(foreign_key="usuario.id", nullable=False)
-    token_hash:  str           = Field(unique=True, index=True, nullable=False, max_length=64)
-    expires_at:  datetime      = Field(nullable=False)
-    revoked_at:  Optional[datetime] = Field(default=None)
-    created_at:  datetime      = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    usuario: "Usuario" = Relationship(back_populates="refresh_tokens")
-
 
 class Usuario(SQLModel, table=True):
 
@@ -73,7 +60,6 @@ class Usuario(SQLModel, table=True):
         back_populates="usuario",
         sa_relationship_kwargs={"foreign_keys": "[UsuarioRol.usuario_id]"}
     )
-    refresh_tokens: List[RefreshToken] = Relationship(back_populates="usuario")
     pedidos:        List["Pedido"] = Relationship(
         back_populates="usuario",
         sa_relationship_kwargs={"foreign_keys": "[Pedido.usuario_id]"},

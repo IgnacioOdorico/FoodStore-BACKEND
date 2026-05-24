@@ -1,21 +1,35 @@
+import logging
+import traceback
 from typing import Annotated, List
+
 from fastapi import APIRouter, Depends, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.schemas import UserCreate, UserPublic, Token, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
+from app.core.config import settings
+from app.modules.usuarios.schemas import (
+    UserCreate, UserPublic, Token, UserUpdate,
+    AdminUserCreate, AdminUserUpdate, PasswordChange,
+)
 from app.modules.usuarios.service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
+logger = logging.getLogger(__name__)
+
+# Tiempo de vida del access token en segundos (para max_age de la cookie)
+_ACCESS_MAX_AGE = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+
+
+# Auth pública
 
 @router.post("/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 def register(
     user_in: UserCreate,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-    """Registra un nuevo usuario."""
+    """Registra un nuevo usuario con rol CLIENT."""
     with uow:
         service = UsuarioService(uow)
         return service.register(user_in)
@@ -27,47 +41,41 @@ def login(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     response: Response,
 ):
-
-    import logging
-    logger = logging.getLogger(__name__)
-    
+    """Login: emite access_token (2 horas) como cookie httpOnly."""
     try:
         logger.info(f"[LOGIN] Attempting login for: {form_data.username}")
-        
         with uow:
             service = UsuarioService(uow)
-            # El formulario de FastAPI usa el campo 'username' para el identificador
             token = service.authenticate(form_data.username, form_data.password)
-            logger.info(f"[LOGIN] Authentication successful for: {form_data.username}")
-
             response.set_cookie(
                 key="access_token",
                 value=token.access_token,
                 httponly=True,
-                max_age=token.expires_in,
+                max_age=_ACCESS_MAX_AGE,
                 samesite="lax",
                 secure=False,
             )
+            logger.info(f"[LOGIN] OK for: {form_data.username}")
             return {"mensaje": "Login exitoso", "user_email": form_data.username}
     except Exception as e:
-        import traceback
-        logger.error(f"[LOGIN ERROR] {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f"[LOGIN ERROR] {e}\n{traceback.format_exc()}")
         raise
 
 
 @router.post("/logout")
 def logout(response: Response):
+    """Cierra la sesión eliminando la cookie de acceso."""
     response.delete_cookie(key="access_token", httponly=True, samesite="lax")
     return {"mensaje": "Sesión cerrada"}
 
+
+# Perfil del usuario autenticado
 
 @router.get("/me", response_model=UserPublic)
 def read_me(
     current_user: Annotated[UserPublic, Depends(get_current_active_user)],
 ):
     return current_user
-
 
 
 @router.patch("/me", response_model=UserPublic)
@@ -92,6 +100,9 @@ def change_password(
     with uow:
         service = UsuarioService(uow)
         service.change_password(current_user.id, data)
+
+
+# Administración de usuarios (solo ADMIN)
 
 @router.post("/admin/usuarios", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 def create_employee(

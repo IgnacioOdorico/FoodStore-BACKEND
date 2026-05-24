@@ -22,9 +22,7 @@ from jose import JWTError, jwt
 from app.core.config import settings
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # HASHING DE CONTRASEÑAS (bcrypt)
-# ─────────────────────────────────────────────────────────────────────────────
 
 import bcrypt
 
@@ -49,9 +47,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 # JWT (JSON Web Tokens)
-# ─────────────────────────────────────────────────────────────────────────────
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
@@ -84,8 +80,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
     # Agrega claims al payload
     to_encode.update({
-        "type": "access",  # distingue access vs refresh (buena práctica)
-        "exp": expire      # claim estándar JWT
+        "type": "access",
+        "exp": expire,
     })
 
     # Firma el token:
