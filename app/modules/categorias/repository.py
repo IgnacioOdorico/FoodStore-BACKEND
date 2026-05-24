@@ -31,6 +31,15 @@ class CategoriaRepository(BaseRepository[Categoria]):
         ).first()
         return result is not None
 
+    def list_active_children(self, parent_id: int) -> List[Categoria]:
+        """Devuelve subcategorías activas de un padre."""
+        return list(self.session.exec(
+            select(Categoria).where(
+                Categoria.parent_id == parent_id,
+                Categoria.deleted_at == None,  # noqa: E711
+            )
+        ).all())
+
     def count_productos_activos(self, categoria_id: int) -> int:
         from app.modules.producto.models import Producto
         from app.modules.producto.associations import ProductoCategoria

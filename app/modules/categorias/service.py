@@ -76,11 +76,37 @@ class CategoriaService:
                 detail="Categoría no encontrada",
             )
 
+        # Bloquear si la categoría padre tiene productos activos
         if self.uow.categorias.count_productos_activos(categoria_id) > 0:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="No se puede eliminar: la categoría tiene productos activos asociados",
             )
 
-        categoria.deleted_at = datetime.now(timezone.utc)
+        # Obtener subcategorías activas
+        subcategorias = self.uow.categorias.list_active_children(categoria_id)
+
+        # Bloquear si alguna subcategoría tiene productos activos
+        subcategorias_con_productos = [
+            s for s in subcategorias
+            if self.uow.categorias.count_productos_activos(s.id) > 0
+        ]
+        if subcategorias_con_productos:
+            nombres = ", ".join(s.nombre for s in subcategorias_con_productos)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"No se puede eliminar: las siguientes subcategorías tienen "
+                    f"productos activos asociados: {nombres}"
+                ),
+            )
+
+        # Cascade soft-delete: eliminar subcategorías activas primero
+        now = datetime.now(timezone.utc)
+        for sub in subcategorias:
+            sub.deleted_at = now
+            self.uow.categorias.update(sub)
+
+        # Soft-delete de la categoría padre
+        categoria.deleted_at = now
         self.uow.categorias.update(categoria)
