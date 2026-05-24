@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.uow import UnitOfWork
 from app.modules.usuarios.model import Usuario, UsuarioRol
-from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, AdminUserUpdate, PasswordChange
+from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
 
 
 class UsuarioService:
@@ -48,6 +48,47 @@ class UsuarioService:
         ))
 
         # 3. Retornar vista pública con roles
+        return self._to_public(user_db)
+
+    def create_employee(self, data: AdminUserCreate) -> UserPublic:
+        """Crea un nuevo empleado con los roles especificados (sin rol CLIENT)."""
+        if self.uow.usuarios.get_by_email_any(data.email):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="El email ya está registrado",
+            )
+
+        if not data.roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debe especificarse al menos un rol",
+            )
+
+        # Validar que los roles existan y sean de staff
+        STAFF_ROLES = {"ADMIN", "STOCK", "PEDIDOS"}
+        for rol_codigo in data.roles:
+            if rol_codigo not in STAFF_ROLES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Rol no permitido para empleados: {rol_codigo}",
+                )
+
+        usuario = Usuario(
+            nombre=data.nombre,
+            apellido=data.apellido,
+            email=data.email,
+            celular=data.celular,
+            password_hash=hash_password(data.password),
+        )
+        user_db = self.uow.usuarios.add(usuario)
+        self.uow.commit()
+
+        for rol_codigo in data.roles:
+            self.uow.usuarios_roles.add(UsuarioRol(
+                usuario_id=user_db.id,
+                rol_codigo=rol_codigo,
+            ))
+
         return self._to_public(user_db)
 
     def authenticate(self, email: str, password: str) -> Token:

@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
-from app.modules.usuarios.schemas import UserCreate, UserPublic, Token, UserUpdate, AdminUserUpdate, PasswordChange
+from app.modules.usuarios.schemas import UserCreate, UserPublic, Token, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
 from app.modules.usuarios.service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -92,6 +92,18 @@ def change_password(
     with uow:
         service = UsuarioService(uow)
         service.change_password(current_user.id, data)
+
+@router.post("/admin/usuarios", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+def create_employee(
+    data: AdminUserCreate,
+    _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """Crea un empleado con los roles indicados. Solo ADMIN."""
+    with uow:
+        service = UsuarioService(uow)
+        return service.create_employee(data)
+
 
 @router.get("/admin/usuarios", response_model=List[UserPublic])
 def list_users(

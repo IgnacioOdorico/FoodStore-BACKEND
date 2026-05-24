@@ -54,6 +54,16 @@ class UserUpdate(SQLModel):
     celular: Optional[str] = None
 
 
+class AdminUserCreate(SQLModel):
+    """Creación de empleado por un administrador — asigna los roles indicados (no CLIENT)."""
+    nombre: str
+    apellido: str
+    email: EmailStr
+    password: str
+    celular: Optional[str] = None
+    roles: List[str] = ["STOCK"]
+
+
 class AdminUserUpdate(SQLModel):
     """Actualización de usuario por un administrador — permite cambiar email y roles."""
     nombre: Optional[str] = None
