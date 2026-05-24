@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.uow import UnitOfWork
 from app.modules.usuarios.model import Usuario, UsuarioRol
-from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, PasswordChange
+from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, AdminUserUpdate, PasswordChange
 
 
 class UsuarioService:
@@ -98,21 +98,51 @@ class UsuarioService:
         updated = self.uow.usuarios.update(user)
         return self._to_public(updated)
 
-    def update_user(self, user_id: int, data: UserUpdate) -> UserPublic:
-        """Actualiza nombre, apellido y celular de cualquier usuario (admin)."""
+    def update_user(self, user_id: int, data: AdminUserUpdate) -> UserPublic:
+        """Actualiza datos de cualquier usuario (admin). Permite cambiar email y roles."""
         user = self.uow.usuarios.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
             )
+
+        # Campos básicos
         if data.nombre is not None:
             user.nombre = data.nombre
         if data.apellido is not None:
             user.apellido = data.apellido
         if data.celular is not None:
             user.celular = data.celular
+
+        # Cambio de email — verificar unicidad
+        if data.email is not None and data.email != user.email:
+            existing = self.uow.usuarios.get_by_email_any(data.email)
+            if existing and existing.id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="El email ya está en uso por otro usuario",
+                )
+            user.email = data.email
+
+        user.updated_at = datetime.now(timezone.utc)
         updated = self.uow.usuarios.update(user)
+
+        # Cambio de roles — reemplazar todos los roles actuales
+        if data.roles is not None:
+            self.uow.usuarios_roles.delete_all_for_user(user_id)
+            for rol_codigo in data.roles:
+                rol = self.uow.roles.get_by_codigo(rol_codigo)
+                if not rol:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Rol desconocido: {rol_codigo}",
+                    )
+                self.uow.usuarios_roles.add(UsuarioRol(
+                    usuario_id=user_id,
+                    rol_codigo=rol_codigo,
+                ))
+
         return self._to_public(updated)
 
     def reactivate_user(self, user_id: int) -> UserPublic:

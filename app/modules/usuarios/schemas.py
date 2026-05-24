@@ -53,6 +53,15 @@ class UserUpdate(SQLModel):
     apellido: Optional[str] = None
     celular: Optional[str] = None
 
+
+class AdminUserUpdate(SQLModel):
+    """Actualización de usuario por un administrador — permite cambiar email y roles."""
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[EmailStr] = None
+    roles: Optional[List[str]] = None
+
 class PasswordChange(SQLModel):
     password_actual: str
     password_nuevo: str

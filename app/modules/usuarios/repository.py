@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 
 from app.core.base_repository import BaseRepository
 from app.modules.usuarios.model import Usuario, Rol, UsuarioRol
@@ -12,9 +12,15 @@ class UsuarioRepository(BaseRepository[Usuario]):
     def get_by_email(self, email: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(
-                Usuario.email == email, 
+                Usuario.email == email,
                 Usuario.deleted_at == None
             )
+        ).first()
+
+    def get_by_email_any(self, email: str) -> Optional[Usuario]:
+        """Busca por email incluyendo usuarios eliminados (para validar unicidad)."""
+        return self.session.exec(
+            select(Usuario).where(Usuario.email == email)
         ).first()
 
     def get_roles_codes(self, usuario_id: int) -> List[str]:
@@ -37,3 +43,9 @@ class RolRepository(BaseRepository[Rol]):
 class UsuarioRolRepository(BaseRepository[UsuarioRol]):
     def __init__(self, session: Session):
         super().__init__(UsuarioRol, session)
+
+    def delete_all_for_user(self, usuario_id: int) -> None:
+        """Elimina todos los roles asignados a un usuario."""
+        statement = delete(UsuarioRol).where(UsuarioRol.usuario_id == usuario_id)
+        self.session.exec(statement)
+        self.session.flush()
