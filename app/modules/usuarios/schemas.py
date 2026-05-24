@@ -21,6 +21,7 @@ class UserPublic(SQLModel):
     celular: Optional[str]
     roles: List[str] = []
     created_at: datetime
+    deleted_at: Optional[datetime] = None
 
 
 class Token(SQLModel):
@@ -51,6 +52,25 @@ class UserUpdate(SQLModel):
     nombre: Optional[str] = None
     apellido: Optional[str] = None
     celular: Optional[str] = None
+
+
+class AdminUserCreate(SQLModel):
+    """Creación de empleado por un administrador — asigna los roles indicados (no CLIENT)."""
+    nombre: str
+    apellido: str
+    email: EmailStr
+    password: str
+    celular: Optional[str] = None
+    roles: List[str] = ["STOCK"]
+
+
+class AdminUserUpdate(SQLModel):
+    """Actualización de usuario por un administrador — permite cambiar email y roles."""
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    celular: Optional[str] = None
+    email: Optional[EmailStr] = None
+    roles: Optional[List[str]] = None
 
 class PasswordChange(SQLModel):
     password_actual: str
