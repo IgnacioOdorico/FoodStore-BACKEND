@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    # ─── Base de datos (PostgreSQL — patrón u_05_v2) ──────────────────────────
+    # Base de datos 
     postgres_user:     str = "postgres"
     postgres_password: str = "password"
     postgres_db:       str = "seguridad_jwt_db"
@@ -45,17 +45,17 @@ class Settings(BaseSettings):
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
-    # ─── JWT ──────────────────────────────────────────────────────────────────
-    SECRET_KEY: str                    # Obligatorio — sin default. Mínimo 32 chars.
+    # JWT
+    SECRET_KEY: str
     ALGORITHM:  str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 
 
     model_config = {
         "env_file":          BASE_DIR / ".env",
         "env_file_encoding": "utf-8",
-        "extra":             "ignore",   # ignora vars extra del .env (ej. DATABASE_URL literal)
+        "extra":             "ignore",   
     }
 
 
-# Instancia global — importar desde aquí en toda la app
+# Instancia global
 settings = Settings()

@@ -92,7 +92,7 @@ class UsuarioService:
         return self._to_public(user_db)
 
     def authenticate(self, email: str, password: str) -> Token:
-        
+        """Verifica credenciales y genera un access token."""
         user = self.uow.usuarios.get_by_email(email)
 
         if not user or not verify_password(password, user.password_hash):
@@ -111,13 +111,9 @@ class UsuarioService:
         roles = self.uow.usuarios.get_roles_codes(user.id)
 
         access_token = create_access_token(
-            data={
-                "sub": user.email, 
-                "roles": roles,
-                "name": f"{user.nombre} {user.apellido}"
-            }
+            data={"sub": user.email, "roles": roles, "name": f"{user.nombre} {user.apellido}"}
         )
-        
+
         return Token(
             access_token=access_token,
             token_type="bearer",

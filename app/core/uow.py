@@ -45,10 +45,10 @@ class UnitOfWork:
     def __enter__(self):
         self.session = Session(engine)
 
-        self.usuarios       = UsuarioRepository(self.session)
-        self.roles          = RolRepository(self.session)
-        self.usuarios_roles = UsuarioRolRepository(self.session)
-        self.direcciones    = DireccionRepository(self.session)
+        self.usuarios        = UsuarioRepository(self.session)
+        self.roles           = RolRepository(self.session)
+        self.usuarios_roles  = UsuarioRolRepository(self.session)
+        self.direcciones     = DireccionRepository(self.session)
 
         self.unidades_medida = UnidadMedidaRepository(self.session)
         self.estados_pedido  = EstadoPedidoRepository(self.session)
