@@ -72,6 +72,18 @@ class PedidoService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"El producto '{producto.nombre}' no está disponible",
                 )
+            
+            if producto.stock_cantidad < it.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para el producto '{producto.nombre}'",
+                )
+            
+            # Descontar stock
+            producto.stock_cantidad -= it.cantidad
+            if producto.stock_cantidad == 0:
+                producto.disponible = False
+            self.uow.productos.update(producto)
 
             sub = float(producto.precio_base) * it.cantidad
             items.append(DetallePedido(
@@ -152,6 +164,16 @@ class PedidoService:
         pedido.estado_codigo = estado_hacia
         pedido.updated_at = datetime.now(timezone.utc)
         self.uow.pedidos.update(pedido)
+        
+        # Restaurar stock si se cancela
+        if estado_hacia == "CANCELADO":
+            for detalle in pedido.detalles:
+                producto = self.uow.productos.get_by_id(detalle.producto_id)
+                if producto:
+                    producto.stock_cantidad += detalle.cantidad
+                    if producto.stock_cantidad > 0:
+                        producto.disponible = True
+                    self.uow.productos.update(producto)
 
         self.uow.session.add(HistorialEstadoPedido(
             pedido_id=pedido.id,
@@ -235,4 +257,5 @@ class PedidoService:
             updated_at=pedido.updated_at,
             detalles=[DetallePedidoPublic.model_validate(d) for d in detalles],
             historial=[HistorialPublic.model_validate(h) for h in historial],
+            direccion=pedido.direccion,
         )

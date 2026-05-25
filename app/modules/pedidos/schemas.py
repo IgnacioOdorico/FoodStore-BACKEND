@@ -4,6 +4,8 @@ from typing import List, Optional
 from pydantic import ConfigDict
 from sqlmodel import SQLModel
 
+from app.modules.direcciones.schemas import DireccionPublic
+
 
 class ItemPedidoRequest(SQLModel):
     producto_id: int
@@ -69,5 +71,6 @@ class PedidoPublic(SQLModel):
 
     detalles: List[DetallePedidoPublic] = []
     historial: List[HistorialPublic] = []
+    direccion: Optional[DireccionPublic] = None
 
     model_config = ConfigDict(from_attributes=True)
