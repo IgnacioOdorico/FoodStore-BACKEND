@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_all_tables
 
-from app.modules.usuarios.router import router as auth_router
+from app.modules.usuarios.router import router as auth_router, admin_router as admin_usuarios_router
 from app.modules.catalogos.router import router as catalogos_router
 from app.modules.direcciones.router import router as direcciones_router
 from app.modules.categorias.router import router as categorias_router
@@ -51,6 +51,7 @@ app.add_middleware(
 
 
 app.include_router(auth_router)
+app.include_router(admin_usuarios_router)
 app.include_router(catalogos_router)
 app.include_router(direcciones_router)
 app.include_router(categorias_router)

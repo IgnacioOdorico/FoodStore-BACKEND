@@ -1,8 +1,8 @@
 import logging
 import traceback
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, Query
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.uow import UnitOfWork, get_uow
@@ -15,6 +15,7 @@ from app.modules.usuarios.schemas import (
 from app.modules.usuarios.service import UsuarioService
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+admin_router = APIRouter(prefix="/api/v1/admin/usuarios", tags=["admin-usuarios"])
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ def change_password(
 
 # Administración de usuarios (solo ADMIN)
 
-@router.post("/admin/usuarios", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
+@admin_router.post("", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 def create_employee(
     data: AdminUserCreate,
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
@@ -116,17 +117,20 @@ def create_employee(
         return service.create_employee(data)
 
 
-@router.get("/admin/usuarios", response_model=List[UserPublic])
+@admin_router.get("", response_model=List[UserPublic])
 def list_users(
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    rol: Annotated[Optional[str], Query(description="Filtrar por rol")] = None,
+    skip: Annotated[int, Query(ge=0, description="Offset de paginación")] = 0,
+    limit: Annotated[int, Query(ge=1, le=100, description="Límite de resultados")] = 100,
 ):
     with uow:
         service = UsuarioService(uow)
-        return service.list_all()
+        return service.list_all(rol=rol, skip=skip, limit=limit)
 
 
-@router.patch("/admin/usuarios/{user_id}", response_model=UserPublic)
+@admin_router.patch("/{user_id}", response_model=UserPublic)
 def update_user(
     user_id: int,
     data: AdminUserUpdate,
@@ -138,7 +142,7 @@ def update_user(
         return service.update_user(user_id, data)
 
 
-@router.post("/admin/usuarios/{user_id}/reactivar", response_model=UserPublic)
+@admin_router.post("/{user_id}/reactivar", response_model=UserPublic)
 def reactivate_user(
     user_id: int,
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],
@@ -149,7 +153,7 @@ def reactivate_user(
         return service.reactivate_user(user_id)
 
 
-@router.delete("/admin/usuarios/{user_id}", response_model=UserPublic)
+@admin_router.delete("/{user_id}", response_model=UserPublic)
 def delete_user(
     user_id: int,
     _admin: Annotated[UserPublic, Depends(require_role(["ADMIN"]))],

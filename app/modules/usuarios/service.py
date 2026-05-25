@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException, status
 
 from app.core.config import settings
@@ -120,8 +120,8 @@ class UsuarioService:
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    def list_all(self) -> List[UserPublic]:
-        usuarios = self.uow.usuarios.get_all()
+    def list_all(self, rol: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[UserPublic]:
+        usuarios = self.uow.usuarios.get_all_active(rol=rol, skip=skip, limit=limit)
         return [self._to_public(u) for u in usuarios]
 
     def delete_user(self, user_id: int) -> UserPublic:

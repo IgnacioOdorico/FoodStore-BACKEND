@@ -9,6 +9,14 @@ class UsuarioRepository(BaseRepository[Usuario]):
     def __init__(self, session: Session):
         super().__init__(Usuario, session)
 
+    def get_all_active(self, rol: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Usuario]:
+        """Obtiene usuarios activos. Si se pasa rol, hace un JOIN filtrando por rol en SQL."""
+        stmt = select(Usuario).where(Usuario.deleted_at == None)
+        if rol:
+            stmt = stmt.join(UsuarioRol, Usuario.id == UsuarioRol.usuario_id).where(UsuarioRol.rol_codigo == rol)
+        stmt = stmt.offset(skip).limit(limit)
+        return list(self.session.exec(stmt).all())
+
     def get_by_email(self, email: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(
