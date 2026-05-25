@@ -25,7 +25,6 @@ from app.modules.categorias.repository import CategoriaRepository
 from app.modules.producto.repository import ProductoRepository
 from app.modules.ingrediente.repository import IngredienteRepository
 from app.modules.pedidos.repository import (PedidoRepository, DetallePedidoRepository, HistorialEstadoPedidoRepository,)
-from app.modules.pagos.repository import PagoRepository
 
 
 class UnitOfWork:
@@ -61,8 +60,6 @@ class UnitOfWork:
         self.pedidos            = PedidoRepository(self.session)
         self.detalles_pedidos   = DetallePedidoRepository(self.session)
         self.historial_pedidos  = HistorialEstadoPedidoRepository(self.session)
-
-        self.pagos = PagoRepository(self.session)
 
         return self
 

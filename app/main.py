@@ -12,7 +12,6 @@ from app.modules.categorias.router import router as categorias_router
 from app.modules.producto.router import router as producto_router
 from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.pedidos.router import router as pedidos_router
-from app.modules.pagos.router import router as pagos_router
 
 
 @asynccontextmanager
@@ -58,7 +57,6 @@ app.include_router(categorias_router)
 app.include_router(producto_router)
 app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
-app.include_router(pagos_router)
 
 
 @app.get("/health", tags=["health"])

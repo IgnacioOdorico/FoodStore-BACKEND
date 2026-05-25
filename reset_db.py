@@ -4,7 +4,6 @@ from app.core.database import engine, create_all_tables
 
 
 TABLAS = [
-    "pago",
     "historial_estado_pedido",
     "detalle_pedido",
     "pedido",
