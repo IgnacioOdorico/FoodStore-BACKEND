@@ -33,7 +33,7 @@ def hash_password(plain: str) -> str:
     Se usa la librería bcrypt directamente para evitar incompatibilidades con passlib.
     """
     pwd_bytes = plain.encode('utf-8')
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(pwd_bytes, salt)
     return hashed.decode('utf-8')
 

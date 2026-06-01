@@ -17,23 +17,34 @@ class UsuarioService:
     def register(self, user_in: UserCreate) -> UserPublic:
         """Registra un nuevo usuario con el rol 'CLIENT' por defecto."""
         
-        if self.uow.usuarios.get_by_email(user_in.email):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="El email ya está registrado",
+        existing_user = self.uow.usuarios.get_by_email_any(user_in.email)
+        
+        if existing_user:
+            if existing_user.deleted_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="El email ya está registrado",
+                )
+            else:
+                existing_user.deleted_at = None
+                existing_user.nombre = user_in.nombre
+                existing_user.apellido = user_in.apellido
+                existing_user.celular = user_in.celular
+                existing_user.password_hash = hash_password(user_in.password)
+                
+                user_db = self.uow.usuarios.update(existing_user)
+                self.uow.usuarios_roles.delete_all_for_user(user_db.id)
+                self.uow.commit()
+        else:
+            usuario = Usuario(
+                nombre=user_in.nombre,
+                apellido=user_in.apellido,
+                email=user_in.email,
+                celular=user_in.celular,
+                password_hash=hash_password(user_in.password),
             )
-
-        # 1. Crear el usuario
-        usuario = Usuario(
-            nombre=user_in.nombre,
-            apellido=user_in.apellido,
-            email=user_in.email,
-            celular=user_in.celular,
-            password_hash=hash_password(user_in.password),
-        )
-
-        user_db = self.uow.usuarios.add(usuario)
-        self.uow.commit() 
+            user_db = self.uow.usuarios.add(usuario)
+            self.uow.commit() 
 
         # 2. Asignar rol CLIENT por defecto 
         rol_client = self.uow.roles.get_by_codigo("CLIENT")
@@ -52,12 +63,6 @@ class UsuarioService:
 
     def create_employee(self, data: AdminUserCreate) -> UserPublic:
         """Crea un nuevo empleado con los roles especificados (sin rol CLIENT)."""
-        if self.uow.usuarios.get_by_email_any(data.email):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="El email ya está registrado",
-            )
-
         if not data.roles:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -73,15 +78,34 @@ class UsuarioService:
                     detail=f"Rol no permitido para empleados: {rol_codigo}",
                 )
 
-        usuario = Usuario(
-            nombre=data.nombre,
-            apellido=data.apellido,
-            email=data.email,
-            celular=data.celular,
-            password_hash=hash_password(data.password),
-        )
-        user_db = self.uow.usuarios.add(usuario)
-        self.uow.commit()
+        existing_user = self.uow.usuarios.get_by_email_any(data.email)
+        
+        if existing_user:
+            if existing_user.deleted_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="El email ya está registrado",
+                )
+            else:
+                existing_user.deleted_at = None
+                existing_user.nombre = data.nombre
+                existing_user.apellido = data.apellido
+                existing_user.celular = data.celular
+                existing_user.password_hash = hash_password(data.password)
+                
+                user_db = self.uow.usuarios.update(existing_user)
+                self.uow.usuarios_roles.delete_all_for_user(user_db.id)
+                self.uow.commit()
+        else:
+            usuario = Usuario(
+                nombre=data.nombre,
+                apellido=data.apellido,
+                email=data.email,
+                celular=data.celular,
+                password_hash=hash_password(data.password),
+            )
+            user_db = self.uow.usuarios.add(usuario)
+            self.uow.commit()
 
         for rol_codigo in data.roles:
             self.uow.usuarios_roles.add(UsuarioRol(
