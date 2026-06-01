@@ -54,3 +54,4 @@ Swagger (Docs) disponible en `http://localhost:8000/docs`.
 
 ## Video del Parcial
 [Ver Video en YouTube](https://www.youtube.com/watch?v=HCHS3oAsbC4)
+Complemento del video: https://www.youtube.com/watch?v=xzheMmXe0Uc
