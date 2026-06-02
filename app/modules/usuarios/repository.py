@@ -17,6 +17,26 @@ class UsuarioRepository(BaseRepository[Usuario]):
         stmt = stmt.offset(skip).limit(limit)
         return list(self.session.exec(stmt).all())
 
+    def get_all(self, rol: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[Usuario]:
+        """Obtiene TODOS los usuarios (activos e inactivos). Si se pasa rol, filtra por rol."""
+        stmt = select(Usuario)
+        if rol:
+            stmt = stmt.join(UsuarioRol, Usuario.id == UsuarioRol.usuario_id).where(UsuarioRol.rol_codigo == rol)
+        stmt = stmt.offset(skip).limit(limit)
+        return list(self.session.exec(stmt).all())
+
+    def get_admin(self) -> Optional[Usuario]:
+        """Obtiene el usuario administrador (si existe)."""
+        stmt = (
+            select(Usuario)
+            .join(UsuarioRol, Usuario.id == UsuarioRol.usuario_id)
+            .where(
+                UsuarioRol.rol_codigo == "ADMIN",
+                Usuario.deleted_at == None
+            )
+        )
+        return self.session.exec(stmt).first()
+
     def get_by_email(self, email: str) -> Optional[Usuario]:
         return self.session.exec(
             select(Usuario).where(
