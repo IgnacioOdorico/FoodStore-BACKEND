@@ -30,6 +30,30 @@ EVENTOS_WS: dict[str, str] = {
 }
 
 
+# ─── Roles por transición (para emisión selectiva de WebSocket) ───────────────
+# Define qué roles de staff se notifican cuando un pedido llega a cada estado.
+# La room del pedido (order:{id}) SIEMPRE se notifica adicionalmente.
+#
+# Lógica de negocio detrás de cada regla:
+#   - PENDIENTE  → pedidos + admin: nuevo pedido para confirmar
+#   - CONFIRMADO → pedidos + cocina + admin: la cocina debe arrancar a preparar
+#   - EN_PREP    → cocina + pedidos + admin: la cocina está preparando
+#   - EN_CAMINO  → pedidos + admin: el pedido salió a delivery
+#   - ENTREGADO  → pedidos + admin: el pedido fue entregado al cliente
+#   - CANCELADO  → pedidos + cocina + admin: todos los involucrados deben saber
+#
+# Los roles están en minúsculas para coincidir con los nombres de rooms
+# ("role:pedidos", "role:cocina", "role:admin").
+ROLES_POR_TRANSICION: dict[str, list[str]] = {
+    "PENDIENTE":  ["pedidos", "admin"],
+    "CONFIRMADO": ["pedidos", "cocina", "admin"],
+    "EN_PREP":    ["cocina", "pedidos", "admin"],
+    "EN_CAMINO":  ["pedidos", "admin"],
+    "ENTREGADO":  ["pedidos", "admin"],
+    "CANCELADO":  ["pedidos", "cocina", "admin"],
+}
+
+
 FSM: dict[str, Set[str]] = {
     "PENDIENTE":  {"CONFIRMADO", "CANCELADO"},
     "CONFIRMADO": {"EN_PREP", "CANCELADO"},
@@ -146,10 +170,18 @@ class PedidoService:
 
         result = self._to_public(pedido.id)
 
-        # Broadcast WebSocket — notifica al admin/cocinero del nuevo pedido
-        # en tiempo real, fuera del bloque transaccional.
+        # ─── Emitir eventos WebSocket ───────────────────────────────────────
+        # Fuera del bloque transaccional para que el commit ya esté hecho
+        # cuando el frontend consulte la API REST.
+        #
+        # Se emite a DOS destinos:
+        #   1. La room del pedido → el cliente que hizo el pedido lo recibe
+        #   2. Las rooms de rol  → el staff relevante (pedidos, admin) lo recibe
         from app.core.websocket import manager
-        await manager.broadcast("PEDIDO_NUEVO", _pedido_to_ws_dict(result))
+        await manager.broadcast_to_order(pedido.id, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
+        roles_a_notificar = ROLES_POR_TRANSICION.get("PENDIENTE", [])
+        if roles_a_notificar:
+            await manager.broadcast_to_roles(roles_a_notificar, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
 
         return result
 
@@ -202,12 +234,21 @@ class PedidoService:
         ))
         result = self._to_public(pedido.id)
 
-        # Broadcast WebSocket — fuera del bloque transaccional para que el
-        # commit ya esté hecho cuando el frontend consulte la API REST.
+        # ─── Emitir eventos WebSocket ───────────────────────────────────────
+        # Fuera del bloque transaccional para que el commit ya esté hecho
+        # cuando el frontend consulte la API REST.
+        #
+        # Se emite a DOS destinos:
+        #   1. La room del pedido → el cliente que hizo el pedido lo recibe
+        #   2. Las rooms de rol  → el staff relevante según la transición
         event_type = EVENTOS_WS.get(estado_hacia)
         if event_type:
             from app.core.websocket import manager
-            await manager.broadcast(event_type, _pedido_to_ws_dict(result))
+            data_ws = _pedido_to_ws_dict(result)
+            await manager.broadcast_to_order(pedido_id, event_type, data_ws)
+            roles_a_notificar = ROLES_POR_TRANSICION.get(estado_hacia, [])
+            if roles_a_notificar:
+                await manager.broadcast_to_roles(roles_a_notificar, event_type, data_ws)
 
         return result
 
