@@ -27,6 +27,5 @@ def create_all_tables() -> None:
     import app.modules.producto.associations    # ProductoCategoria, ProductoIngrediente
     import app.modules.producto.models          # Producto
     import app.modules.pedidos.models           # Pedido, DetallePedido, HistorialEstadoPedido
-    import app.modules.pagos.models             # Pago
 
     SQLModel.metadata.create_all(engine)

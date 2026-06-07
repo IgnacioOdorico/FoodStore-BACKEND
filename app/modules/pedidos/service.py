@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import List, Optional, Set
+from typing import Any, List, Optional, Set
 
 from fastapi import HTTPException, status
 
@@ -18,6 +18,42 @@ from app.modules.pedidos.schemas import (
 
 
 
+# ─── Eventos WebSocket ───────────────────────────────────────────────────────
+# Mapea estado destino (uppercase, según FSM del backend) → evento WS para el frontend.
+EVENTOS_WS: dict[str, str] = {
+    "PENDIENTE":  "PEDIDO_NUEVO",
+    "CONFIRMADO": "PEDIDO_CONFIRMADO",
+    "EN_PREP":    "PEDIDO_EN_PREPARACION",
+    "EN_CAMINO":  "PEDIDO_EN_CAMINO",
+    "ENTREGADO":  "PEDIDO_ENTREGADO",
+    "CANCELADO":  "PEDIDO_CANCELADO",
+}
+
+
+# ─── Roles por transición (para emisión selectiva de WebSocket) ───────────────
+# Define qué roles de staff se notifican cuando un pedido llega a cada estado.
+# La room del pedido (order:{id}) SIEMPRE se notifica adicionalmente.
+#
+# Lógica de negocio detrás de cada regla:
+#   - PENDIENTE  → pedidos + admin: nuevo pedido para confirmar
+#   - CONFIRMADO → pedidos + cocina + admin: la cocina debe arrancar a preparar
+#   - EN_PREP    → cocina + pedidos + admin: la cocina está preparando
+#   - EN_CAMINO  → pedidos + admin: el pedido salió a delivery
+#   - ENTREGADO  → pedidos + admin: el pedido fue entregado al cliente
+#   - CANCELADO  → pedidos + cocina + admin: todos los involucrados deben saber
+#
+# Los roles están en minúsculas para coincidir con los nombres de rooms
+# ("role:pedidos", "role:cocina", "role:admin").
+ROLES_POR_TRANSICION: dict[str, list[str]] = {
+    "PENDIENTE":  ["pedidos", "admin"],
+    "CONFIRMADO": ["pedidos", "cocina", "admin"],
+    "EN_PREP":    ["cocina", "pedidos", "admin"],
+    "EN_CAMINO":  ["pedidos", "admin"],
+    "ENTREGADO":  ["pedidos", "admin"],
+    "CANCELADO":  ["pedidos", "cocina", "admin"],
+}
+
+
 FSM: dict[str, Set[str]] = {
     "PENDIENTE":  {"CONFIRMADO", "CANCELADO"},
     "CONFIRMADO": {"EN_PREP", "CANCELADO"},
@@ -34,7 +70,7 @@ class PedidoService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    def crear_pedido(self, usuario_id: int, data: PedidoCreate) -> PedidoPublic:
+    async def crear_pedido(self, usuario_id: int, data: PedidoCreate) -> PedidoPublic:
 
     # 1. Validar datos de entrada y permisos
         fp = self.uow.formas_pago.get_by_codigo(data.forma_pago_codigo)
@@ -72,6 +108,18 @@ class PedidoService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"El producto '{producto.nombre}' no está disponible",
                 )
+            
+            if producto.stock_cantidad < it.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para el producto '{producto.nombre}'",
+                )
+            
+            # Descontar stock
+            producto.stock_cantidad -= it.cantidad
+            if producto.stock_cantidad == 0:
+                producto.disponible = False
+            self.uow.productos.update(producto)
 
             sub = float(producto.precio_base) * it.cantidad
             items.append(DetallePedido(
@@ -112,7 +160,7 @@ class PedidoService:
             self.uow.session.add(d)
 
         # 5. INSERT en audit trail de estados
-        self.uow.session.add(HistorialEstadoPedido(
+        self.uow.historial_pedidos.add(HistorialEstadoPedido(
             pedido_id=pedido.id,
             estado_desde=None,
             estado_hacia="PENDIENTE",
@@ -120,11 +168,25 @@ class PedidoService:
             motivo="Creación del pedido",
         ))
 
-        self.uow.session.flush()
-        return self._to_public(pedido.id)
+        result = self._to_public(pedido.id)
+
+        # ─── Emitir eventos WebSocket ───────────────────────────────────────
+        # Fuera del bloque transaccional para que el commit ya esté hecho
+        # cuando el frontend consulte la API REST.
+        #
+        # Se emite a DOS destinos:
+        #   1. La room del pedido → el cliente que hizo el pedido lo recibe
+        #   2. Las rooms de rol  → el staff relevante (pedidos, admin) lo recibe
+        from app.core.websocket import manager
+        await manager.broadcast_to_order(pedido.id, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
+        roles_a_notificar = ROLES_POR_TRANSICION.get("PENDIENTE", [])
+        if roles_a_notificar:
+            await manager.broadcast_to_roles(roles_a_notificar, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
+
+        return result
 
 
-    def avanzar_estado(
+    async def avanzar_estado(
         self,
         pedido_id: int,
         estado_hacia: str,
@@ -152,18 +214,45 @@ class PedidoService:
         pedido.estado_codigo = estado_hacia
         pedido.updated_at = datetime.now(timezone.utc)
         self.uow.pedidos.update(pedido)
+        
+        # Restaurar stock si se cancela
+        if estado_hacia == "CANCELADO":
+            for detalle in pedido.detalles:
+                producto = self.uow.productos.get_by_id(detalle.producto_id)
+                if producto:
+                    producto.stock_cantidad += detalle.cantidad
+                    if producto.stock_cantidad > 0:
+                        producto.disponible = True
+                    self.uow.productos.update(producto)
 
-        self.uow.session.add(HistorialEstadoPedido(
+        self.uow.historial_pedidos.add(HistorialEstadoPedido(
             pedido_id=pedido.id,
             estado_desde=estado_desde,
             estado_hacia=estado_hacia,
             usuario_id=usuario_id,
             motivo=motivo,
         ))
-        self.uow.session.flush()
-        return self._to_public(pedido.id)
+        result = self._to_public(pedido.id)
 
-    def cancelar_cliente(
+        # ─── Emitir eventos WebSocket ───────────────────────────────────────
+        # Fuera del bloque transaccional para que el commit ya esté hecho
+        # cuando el frontend consulte la API REST.
+        #
+        # Se emite a DOS destinos:
+        #   1. La room del pedido → el cliente que hizo el pedido lo recibe
+        #   2. Las rooms de rol  → el staff relevante según la transición
+        event_type = EVENTOS_WS.get(estado_hacia)
+        if event_type:
+            from app.core.websocket import manager
+            data_ws = _pedido_to_ws_dict(result)
+            await manager.broadcast_to_order(pedido_id, event_type, data_ws)
+            roles_a_notificar = ROLES_POR_TRANSICION.get(estado_hacia, [])
+            if roles_a_notificar:
+                await manager.broadcast_to_roles(roles_a_notificar, event_type, data_ws)
+
+        return result
+
+    async def cancelar_cliente(
         self,
         pedido_id: int,
         usuario_id: int,
@@ -185,7 +274,7 @@ class PedidoService:
                 ),
             )
 
-        return self.avanzar_estado(pedido_id, "CANCELADO", usuario_id, motivo)
+        return await self.avanzar_estado(pedido_id, "CANCELADO", usuario_id, motivo)
 
     def get_pedido_para_usuario(self, pedido_id: int, usuario_id: int, roles: List[str]) -> PedidoPublic:
         pedido = self._get_pedido_or_404(pedido_id)
@@ -235,4 +324,21 @@ class PedidoService:
             updated_at=pedido.updated_at,
             detalles=[DetallePedidoPublic.model_validate(d) for d in detalles],
             historial=[HistorialPublic.model_validate(h) for h in historial],
+            direccion=pedido.direccion,
         )
+
+
+def _pedido_to_ws_dict(pedido: PedidoPublic) -> dict[str, Any]:
+    # Serializa PedidoPublic a un dict apto para JSON/WebSocket.
+    # Convierte datetimes a ISO strings para que sean serializables
+    # sin depender de un encoder personalizado en el WS layer.
+    return {
+        "id":                pedido.id,
+        "usuario_id":        pedido.usuario_id,
+        "estado_codigo":     pedido.estado_codigo,
+        "forma_pago_codigo": pedido.forma_pago_codigo,
+        "total":             pedido.total,
+        "notas":             pedido.notas,
+        "created_at":        pedido.created_at.isoformat(),
+        "updated_at":        pedido.updated_at.isoformat(),
+    }

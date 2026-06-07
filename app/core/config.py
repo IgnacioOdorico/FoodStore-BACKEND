@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # Base de datos 
     postgres_user:     str = "postgres"
     postgres_password: str = "password"
-    postgres_db:       str = "seguridad_jwt_db"
+    postgres_db:       str = "parcial2"
     postgres_host:     str = "localhost"
     postgres_port:     int = 5432
 
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM:  str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 # 30 
 
     model_config = {
         "env_file":          BASE_DIR / ".env",

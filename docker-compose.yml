@@ -3,11 +3,11 @@ version: '3.8'
 services:
   db:
     image: postgres:15
-    container_name: tp3_postgres_db
+    container_name: parcial2_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: tp3_productos
+      POSTGRES_DB: parcial2
     ports:
       - "5432:5432"
     volumes:

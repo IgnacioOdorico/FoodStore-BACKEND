@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from app.modules.usuarios.model import Usuario
     from app.modules.direcciones.models import DireccionEntrega
     from app.modules.catalogos.models import EstadoPedido, FormaPago
-    from app.modules.pagos.models import Pago
 
 
 class Pedido(SQLModel, table=True):
@@ -49,7 +48,7 @@ class Pedido(SQLModel, table=True):
         back_populates="pedido",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    pagos:      List["Pago"] = Relationship(back_populates="pedido")
+
 
 
 class DetallePedido(SQLModel, table=True):

@@ -66,7 +66,6 @@ async def get_current_active_user(
     current_user: Annotated[UserPublic, Depends(get_current_user)],
 ) -> UserPublic:
     """Verifica que el usuario no esté marcado como eliminado."""
-    # En el nuevo modelo, usamos deleted_at. get_current_user ya filtra activos.
     return current_user
 
 
@@ -79,7 +78,6 @@ def require_role(allowed_roles: List[str]):
         current_user: Annotated[UserPublic, Depends(get_current_active_user)],
     ) -> UserPublic:
         
-        # current_user.roles es una List[str] según el nuevo UserPublic
         has_access = any(role in allowed_roles for role in current_user.roles)
         
         if not has_access:
