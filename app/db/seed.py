@@ -1,5 +1,5 @@
 """
-Seed — FoodStore (ERD v6).
+Seed — FoodStore (ERD v7).
 
 Carga:
   1.  Roles                (ADMIN, STOCK, PEDIDOS, CLIENT)
@@ -52,7 +52,7 @@ def _upsert(session: Session, model, key_field: str, key_value, defaults: dict):
 
 
 def run() -> None:
-    print("Sembrando datos (FoodStore ERD v6)...")
+    print("Sembrando datos (FoodStore ERD v7)...")
     create_all_tables()
 
     with Session(engine) as session:
@@ -71,12 +71,11 @@ def run() -> None:
 
         # ─── 2. ESTADOS DE PEDIDO ────────────────────────────────────────
         estados_data = [
-            {"codigo": "PENDIENTE",  "descripcion": "Pendiente",  "orden": 1, "es_terminal": False},
-            {"codigo": "CONFIRMADO", "descripcion": "Confirmado", "orden": 2, "es_terminal": False},
+            {"codigo": "PENDIENTE",  "descripcion": "Pendiente",      "orden": 1, "es_terminal": False},
+            {"codigo": "CONFIRMADO", "descripcion": "Confirmado",     "orden": 2, "es_terminal": False},
             {"codigo": "EN_PREP",    "descripcion": "En preparación", "orden": 3, "es_terminal": False},
-            {"codigo": "EN_CAMINO",  "descripcion": "En camino",  "orden": 4, "es_terminal": False},
-            {"codigo": "ENTREGADO",  "descripcion": "Entregado",  "orden": 5, "es_terminal": True},
-            {"codigo": "CANCELADO",  "descripcion": "Cancelado",  "orden": 6, "es_terminal": True},
+            {"codigo": "ENTREGADO",  "descripcion": "Entregado",      "orden": 4, "es_terminal": True},
+            {"codigo": "CANCELADO",  "descripcion": "Cancelado",      "orden": 5, "es_terminal": True},
         ]
         for e in estados_data:
             if not session.get(EstadoPedido, e["codigo"]):
