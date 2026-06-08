@@ -30,9 +30,8 @@ class EstadoPedido(SQLModel, table=True):
       PENDIENTE  (orden 1, terminal=False)
       CONFIRMADO (orden 2, terminal=False)
       EN_PREP    (orden 3, terminal=False)
-      EN_CAMINO  (orden 4, terminal=False)
-      ENTREGADO  (orden 5, terminal=True)
-      CANCELADO  (orden 6, terminal=True)
+      ENTREGADO  (orden 4, terminal=True)
+      CANCELADO  (orden 5, terminal=True)
     """
     __tablename__ = "estado_pedido"
 
