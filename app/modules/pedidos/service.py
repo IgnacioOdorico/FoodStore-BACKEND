@@ -24,7 +24,6 @@ EVENTOS_WS: dict[str, str] = {
     "PENDIENTE":  "PEDIDO_NUEVO",
     "CONFIRMADO": "PEDIDO_CONFIRMADO",
     "EN_PREP":    "PEDIDO_EN_PREPARACION",
-    "EN_CAMINO":  "PEDIDO_EN_CAMINO",
     "ENTREGADO":  "PEDIDO_ENTREGADO",
     "CANCELADO":  "PEDIDO_CANCELADO",
 }
@@ -38,7 +37,6 @@ EVENTOS_WS: dict[str, str] = {
 #   - PENDIENTE  → pedidos + admin: nuevo pedido para confirmar
 #   - CONFIRMADO → pedidos + cocina + admin: la cocina debe arrancar a preparar
 #   - EN_PREP    → cocina + pedidos + admin: la cocina está preparando
-#   - EN_CAMINO  → pedidos + admin: el pedido salió a delivery
 #   - ENTREGADO  → pedidos + admin: el pedido fue entregado al cliente
 #   - CANCELADO  → pedidos + cocina + admin: todos los involucrados deben saber
 #
@@ -48,7 +46,6 @@ ROLES_POR_TRANSICION: dict[str, list[str]] = {
     "PENDIENTE":  ["pedidos", "admin"],
     "CONFIRMADO": ["pedidos", "cocina", "admin"],
     "EN_PREP":    ["cocina", "pedidos", "admin"],
-    "EN_CAMINO":  ["pedidos", "admin"],
     "ENTREGADO":  ["pedidos", "admin"],
     "CANCELADO":  ["pedidos", "cocina", "admin"],
 }
@@ -57,8 +54,7 @@ ROLES_POR_TRANSICION: dict[str, list[str]] = {
 FSM: dict[str, Set[str]] = {
     "PENDIENTE":  {"CONFIRMADO", "CANCELADO"},
     "CONFIRMADO": {"EN_PREP", "CANCELADO"},
-    "EN_PREP":    {"EN_CAMINO", "CANCELADO"},
-    "EN_CAMINO":  {"ENTREGADO"},
+    "EN_PREP":    {"ENTREGADO", "CANCELADO"},
     "ENTREGADO":  set(),  # terminal
     "CANCELADO":  set(),  # terminal
 }
