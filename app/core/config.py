@@ -16,23 +16,22 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    # Base de datos 
-    postgres_user:     str = "postgres"
+    # Base de datos
+    postgres_user: str = "postgres"
     postgres_password: str = "password"
-    postgres_db:       str = "parcial2"
-    postgres_host:     str = "localhost"
-    postgres_port:     int = 5432
+    postgres_db: str = "parcial2"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
 
+    # @computed_field:
+    # Decorador de Pydantic v2 que indica que este atributo calculado
+    # debe incluirse en la serialización del modelo (model_dump / JSON),
+    # aunque no sea un campo persistido.
 
-# @computed_field:
-# Decorador de Pydantic v2 que indica que este atributo calculado
-# debe incluirse en la serialización del modelo (model_dump / JSON),
-# aunque no sea un campo persistido.
-
-# @property:
-# Convierte el método en una propiedad de solo lectura.
-# Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
-# El valor se calcula dinámicamente en cada acceso.
+    # @property:
+    # Convierte el método en una propiedad de solo lectura.
+    # Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
+    # El valor se calcula dinámicamente en cada acceso.
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
@@ -47,13 +46,14 @@ class Settings(BaseSettings):
 
     # JWT
     SECRET_KEY: str
-    ALGORITHM:  str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 # 30 
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     model_config = {
-        "env_file":          BASE_DIR / ".env",
+        "env_file": BASE_DIR / ".env",
         "env_file_encoding": "utf-8",
-        "extra":             "ignore",   
+        "extra": "ignore",
     }
 
 
