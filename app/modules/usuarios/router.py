@@ -19,7 +19,6 @@ admin_router = APIRouter(prefix="/api/v1/admin/usuarios", tags=["admin-usuarios"
 
 logger = logging.getLogger(__name__)
 
-# Tiempo de vida del access token en segundos (para max_age de la cookie)
 _ACCESS_MAX_AGE = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
 
@@ -42,7 +41,7 @@ def login(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     response: Response,
 ):
-    """Login: emite access_token (2 horas) como cookie httpOnly."""
+    """Login: emite access_token como cookie httpOnly."""
     try:
         logger.info(f"[LOGIN] Attempting login for: {form_data.username}")
         with uow:
