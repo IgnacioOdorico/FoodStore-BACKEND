@@ -12,8 +12,6 @@ class DireccionCreate(SQLModel):
     ciudad: str = Field(min_length=1, max_length=100)
     provincia: Optional[str] = Field(default=None, max_length=100)
     codigo_postal: Optional[str] = Field(default=None, max_length=10)
-    latitud: Optional[float] = None
-    longitud: Optional[float] = None
     es_principal: bool = False
 
 
@@ -24,8 +22,6 @@ class DireccionUpdate(SQLModel):
     ciudad: Optional[str] = Field(default=None, max_length=100)
     provincia: Optional[str] = Field(default=None, max_length=100)
     codigo_postal: Optional[str] = Field(default=None, max_length=10)
-    latitud: Optional[float] = None
-    longitud: Optional[float] = None
 
 
 class DireccionPublic(SQLModel):
@@ -37,8 +33,6 @@ class DireccionPublic(SQLModel):
     ciudad: str
     provincia: Optional[str]
     codigo_postal: Optional[str]
-    latitud: Optional[float]
-    longitud: Optional[float]
     es_principal: bool
     created_at: datetime
     updated_at: datetime

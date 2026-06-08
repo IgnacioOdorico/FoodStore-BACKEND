@@ -20,9 +20,6 @@ class DireccionEntrega(SQLModel, table=True):
     ciudad:         str           = Field(max_length=100, nullable=False)
     provincia:      Optional[str] = Field(default=None, max_length=100)
     codigo_postal:  Optional[str] = Field(default=None, max_length=10)
-    latitud:        Optional[float] = Field(default=None)
-    longitud:       Optional[float] = Field(default=None)
-
     es_principal:   bool          = Field(default=False, nullable=False)
 
     created_at:     datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
