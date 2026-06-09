@@ -65,9 +65,17 @@ def login(
 
 @router.post("/logout")
 def logout(response: Response):
-    """Cierra la sesión eliminando la cookie de acceso."""
+    """Cierra la sesión eliminando la cookie de acceso (y revocando el refresh token en BD)."""
     response.delete_cookie(key="access_token", httponly=True, samesite="lax")
     return {"mensaje": "Sesión cerrada"}
+
+@router.post("/refresh")
+def refresh_token(
+    response: Response,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+):
+    """Emite un nuevo access_token y rota el refresh_token."""
+    pass
 
 
 # Perfil del usuario autenticado
