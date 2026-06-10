@@ -7,7 +7,7 @@ Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 """
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import computed_field, field_validator
 from pydantic_settings import BaseSettings
@@ -18,27 +18,28 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    # Base de datos 
-    postgres_user:     str = "postgres"
+    # Base de datos
+    postgres_user: str = "postgres"
     postgres_password: str = "password"
-    postgres_db:       str = "parcial2"
-    postgres_host:     str = "localhost"
-    postgres_port:     int = 5432
+    postgres_db: str = "parcial2"
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
 
     # URL para tests (SQLite in-memory por defecto).
     # conftest.py puede sobreescribir el engine directamente, pero
     # esta variable la consume el fixture de engine de tests.
     TEST_DATABASE_URL: str = "sqlite:///:memory:"
 
-# @computed_field:
-# Decorador de Pydantic v2 que indica que este atributo calculado
-# debe incluirse en la serialización del modelo (model_dump / JSON),
-# aunque no sea un campo persistido.
+    # @computed_field:
+    # Decorador de Pydantic v2 que indica que este atributo calculado
+    # debe incluirse en la serialización del modelo (model_dump / JSON),
+    # aunque no sea un campo persistido.
 
-# @property:
-# Convierte el método en una propiedad de solo lectura.
-# Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
-# El valor se calcula dinámicamente en cada acceso.
+    # @property:
+    # Convierte el método en una propiedad de solo lectura.
+    # Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
+    # El valor se calcula dinámicamente en cada acceso.
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
@@ -54,7 +55,18 @@ class Settings(BaseSettings):
     # JWT
     SECRET_KEY: str
     ALGORITHM:  str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120 # 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 120  # 30
+
+    # ─── MercadoPago ─────────────────────────────────────────────────────────
+    MP_ACCESS_TOKEN: Optional[str] = None
+    MP_PUBLIC_KEY: Optional[str] = None
+    MP_WEBHOOK_URL: Optional[str] = None
+    MP_WEBHOOK_SECRET: Optional[str] = None
+    NGROK_URL: Optional[str] = None
+
+    # Frontend / API (usadas para back_urls y redirects post-pago)
+    VITE_API_URL: str = "http://localhost:8000"
+    VITE_FRONTEND_URL: str = "http://localhost:5173"
 
     # ─── Cloudinary ──────────────────────────────────────────────────────────
     CLOUDINARY_CLOUD_NAME: str = ""
@@ -121,7 +133,7 @@ class Settings(BaseSettings):
         return self.RATE_LIMIT_AUTH_PER_MINUTE
 
     model_config = {
-        "env_file":          BASE_DIR / ".env",
+        "env_file": BASE_DIR / ".env",
         "env_file_encoding": "utf-8",
         "extra":             "ignore",
         "case_sensitive":    False,
@@ -139,4 +151,3 @@ if settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY:
         api_secret=settings.CLOUDINARY_API_SECRET,
         secure=True,
     )
-

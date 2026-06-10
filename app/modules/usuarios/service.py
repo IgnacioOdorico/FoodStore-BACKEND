@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import HTTPException, status
 
-from app.core.config import settings
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import (
+    hash_password, verify_password, create_access_token,
+)
 from app.core.uow import UnitOfWork
 from app.modules.usuarios.model import Usuario, UsuarioRol
 from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
@@ -125,7 +126,7 @@ class UsuarioService:
         return self._to_public(user_db)
 
     def authenticate(self, email: str, password: str) -> Token:
-        """Verifica credenciales y genera un access token."""
+        """Verifica credenciales y genera access token. Retorna Token."""
         user = self.uow.usuarios.get_by_email(email)
 
         if not user or not verify_password(password, user.password_hash):
@@ -150,15 +151,11 @@ class UsuarioService:
         return Token(
             access_token=access_token,
             token_type="bearer",
-            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires_in=30 * 60,
         )
 
-    def refresh_token(self, current_refresh_token: str) -> Token:
-        """Valida el refresh token, lo revoca y emite un nuevo par (access, refresh)."""
-        pass
-
-    def logout(self, current_refresh_token: str) -> None:
-        """Revoca el refresh token en la base de datos."""
+    def logout_user(self) -> None:
+        """No-op: con solo access token en cookie, el logout se maneja borrando la cookie."""
         pass
 
     def list_all(self, rol: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[UserPublic]:

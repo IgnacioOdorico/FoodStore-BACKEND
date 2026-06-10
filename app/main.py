@@ -34,7 +34,7 @@ from app.core.rate_limit.rate_limit_middleware import RateLimitMiddleware
 # Exception handlers (portados de api_middlewares_testing)
 from app.core.exceptions.exception_handlers import register_exception_handlers
 
-# Routers — todos los módulos de FoodStore (sin cambios)
+# Routers — todos los módulos de FoodStore
 from app.modules.usuarios.router import router as auth_router, admin_router as admin_usuarios_router
 from app.modules.catalogos.router import router as catalogos_router
 from app.modules.direcciones.router import router as direcciones_router
@@ -150,7 +150,7 @@ register_exception_handlers(app)
 
 
 # ---------------------------------------------------------------------------
-# ROUTERS — todos los módulos de FoodStore (sin cambios)
+# ROUTERS — todos los módulos de FoodStore
 # ---------------------------------------------------------------------------
 app.include_router(auth_router)
 app.include_router(admin_usuarios_router)

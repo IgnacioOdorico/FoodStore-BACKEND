@@ -32,22 +32,23 @@ def hash_password(plain: str) -> str:
     Recibe una contraseña en texto plano y devuelve su hash bcrypt.
     Se usa la librería bcrypt directamente para evitar incompatibilidades con passlib.
     """
-    pwd_bytes = plain.encode('utf-8')
+    pwd_bytes = plain.encode("utf-8")
     salt = bcrypt.gensalt(rounds=12)
     hashed = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
     """
     Verifica si una contraseña en texto plano coincide con un hash bcrypt.
     """
-    pwd_bytes = plain.encode('utf-8')
-    hashed_bytes = hashed.encode('utf-8')
+    pwd_bytes = plain.encode("utf-8")
+    hashed_bytes = hashed.encode("utf-8")
     return bcrypt.checkpw(pwd_bytes, hashed_bytes)
 
 
 # JWT (JSON Web Tokens)
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
@@ -59,7 +60,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
     Comportamiento:
     - Clona el payload (evita mutación externa)
-    - Calcula expiración 
+    - Calcula expiración
     - Agrega claims estándar:
         * "exp"  → expiración
         * "type" → tipo de token (acceso)
@@ -79,10 +80,12 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     )
 
     # Agrega claims al payload
-    to_encode.update({
-        "type": "access",
-        "exp": expire,
-    })
+    to_encode.update(
+        {
+            "type": "access",
+            "exp": expire,
+        }
+    )
 
     # Firma el token:
     # - SECRET_KEY → clave simétrica
@@ -113,9 +116,7 @@ def decode_access_token(token: str) -> dict | None:
     try:
         # Decodifica y valida firma + exp
         payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
 
         # Validación de tipo de token (defensa extra)
