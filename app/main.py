@@ -5,13 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import create_all_tables
 
-from app.modules.usuarios.router import router as auth_router, admin_router as admin_usuarios_router
+from app.modules.usuarios.router import (
+    router as auth_router,
+    admin_router as admin_usuarios_router,
+)
 from app.modules.catalogos.router import router as catalogos_router
 from app.modules.direcciones.router import router as direcciones_router
 from app.modules.categorias.router import router as categorias_router
 from app.modules.producto.router import router as producto_router
 from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.pedidos.router import router as pedidos_router
+from app.modules.pagos.router import router as pagos_router
 
 
 @asynccontextmanager
@@ -19,8 +23,6 @@ async def lifespan(app: FastAPI):
     try:
         create_all_tables()
     except Exception:
-        # En tests, la BD de producción no está disponible.
-        # conftest.py crea las tablas con SQLite en memoria.
         pass
     yield
 
@@ -58,6 +60,7 @@ app.include_router(categorias_router)
 app.include_router(producto_router)
 app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
+app.include_router(pagos_router)
 
 
 @app.get("/health", tags=["health"])

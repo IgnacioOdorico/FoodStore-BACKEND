@@ -7,6 +7,7 @@ Los valores sensibles (SECRET_KEY, POSTGRES_PASSWORD) viven en .env.
 """
 
 from pathlib import Path
+from typing import Optional
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings
@@ -23,15 +24,6 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
 
-    # @computed_field:
-    # Decorador de Pydantic v2 que indica que este atributo calculado
-    # debe incluirse en la serialización del modelo (model_dump / JSON),
-    # aunque no sea un campo persistido.
-
-    # @property:
-    # Convierte el método en una propiedad de solo lectura.
-    # Permite acceder como atributo (obj.algo) en lugar de método (obj.algo()).
-    # El valor se calcula dinámicamente en cada acceso.
     @computed_field
     @property
     def DATABASE_URL(self) -> str:
@@ -48,7 +40,16 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    MP_ACCESS_TOKEN: Optional[str] = None
+    MP_PUBLIC_KEY: Optional[str] = None
+    MP_WEBHOOK_URL: Optional[str] = None
+    MP_WEBHOOK_SECRET: Optional[str] = None
+    NGROK_URL: Optional[str] = None
+
+    # Frontend / API (usadas para back_urls y redirects post-pago)
+    VITE_API_URL: str = "http://localhost:8000"
+    VITE_FRONTEND_URL: str = "http://localhost:5173"
 
     model_config = {
         "env_file": BASE_DIR / ".env",

@@ -19,13 +19,14 @@ def get_session():
 
 def create_all_tables() -> None:
     """Crea las tablas registradas en SQLModel.metadata al arrancar la app."""
-    import app.modules.usuarios.model           # Usuario, Rol, UsuarioRol, RefreshToken
-    import app.modules.direcciones.models       # DireccionEntrega
-    import app.modules.catalogos.models         # UnidadMedida, EstadoPedido, FormaPago
-    import app.modules.categorias.model         # Categoria
-    import app.modules.ingrediente.models       # Ingrediente
-    import app.modules.producto.associations    # ProductoCategoria, ProductoIngrediente
-    import app.modules.producto.models          # Producto
-    import app.modules.pedidos.models           # Pedido, DetallePedido, HistorialEstadoPedido
+    import app.modules.usuarios.model  # Usuario, Rol, UsuarioRol
+    import app.modules.direcciones.models  # DireccionEntrega
+    import app.modules.catalogos.models  # UnidadMedida, EstadoPedido, FormaPago
+    import app.modules.categorias.model  # Categoria
+    import app.modules.ingrediente.models  # Ingrediente
+    import app.modules.producto.associations  # ProductoCategoria, ProductoIngrediente
+    import app.modules.producto.models  # Producto
+    import app.modules.pedidos.models  # Pedido, DetallePedido, HistorialEstadoPedido
+    import app.modules.pagos.models  # Pago
 
     SQLModel.metadata.create_all(engine)

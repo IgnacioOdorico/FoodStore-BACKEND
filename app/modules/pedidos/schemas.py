@@ -5,6 +5,7 @@ from pydantic import ConfigDict
 from sqlmodel import SQLModel
 
 from app.modules.direcciones.schemas import DireccionPublic
+from app.modules.pagos.schemas import PagoRead
 
 
 class ItemPedidoRequest(SQLModel):
@@ -72,5 +73,6 @@ class PedidoPublic(SQLModel):
     detalles: List[DetallePedidoPublic] = []
     historial: List[HistorialPublic] = []
     direccion: Optional[DireccionPublic] = None
+    pago: Optional[PagoRead] = None
 
     model_config = ConfigDict(from_attributes=True)
