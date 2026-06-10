@@ -12,6 +12,10 @@ API REST del sistema FoodStore. Permite gestionar productos, categorías, pedido
 | Python 3.10+ | Lenguaje |
 | PostgreSQL | Base de datos |
 | Docker & Compose | Contenedor de la DB |
+| SQLModel | ORM (Object Relational Mapping) |
+| Cloudinary | Almacenamiento de imágenes en la nube |
+| Pytest | Pruebas unitarias y de integración |
+| Python-JOSE / Passlib | Autenticación (JWT) y hashing de contraseñas |
 
 ---
 
@@ -45,6 +49,9 @@ python reset_db.py
 
 # 6. Levantar el servidor de desarrollo
 uvicorn app.main:app --reload
+
+# 7. Ejecutar pruebas (opcional)
+pytest
 ```
 
 La API queda disponible en `http://localhost:8000`.

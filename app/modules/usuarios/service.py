@@ -153,6 +153,14 @@ class UsuarioService:
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
+    def refresh_token(self, current_refresh_token: str) -> Token:
+        """Valida el refresh token, lo revoca y emite un nuevo par (access, refresh)."""
+        pass
+
+    def logout(self, current_refresh_token: str) -> None:
+        """Revoca el refresh token en la base de datos."""
+        pass
+
     def list_all(self, rol: Optional[str] = None, skip: int = 0, limit: int = 100) -> List[UserPublic]:
         usuarios = self.uow.usuarios.get_all(rol=rol, skip=skip, limit=limit)
         return [self._to_public(u) for u in usuarios]

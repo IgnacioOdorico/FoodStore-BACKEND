@@ -17,6 +17,7 @@ class Ingrediente(SQLModel, table=True):
     descripcion: Optional[str] = Field(default=None)
     es_alergeno: bool          = Field(default=False, nullable=False)
 
+
     created_at:  datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at:  datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
