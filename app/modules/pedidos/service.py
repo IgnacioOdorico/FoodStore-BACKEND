@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Set
+from typing import Any, List, Optional, Set, Tuple
 
 from fastapi import HTTPException, status
 
@@ -12,6 +12,7 @@ from app.modules.pedidos.models import (
 from app.modules.pedidos.schemas import (
     PedidoCreate,
     PedidoPublic,
+    PaginatedPedidos,
     DetallePedidoPublic,
     HistorialPublic,
 )
@@ -26,11 +27,11 @@ EVENTOS_WS: dict[str, str] = {
 }
 
 ROLES_POR_TRANSICION: dict[str, list[str]] = {
-    "PENDIENTE": ["pedidos", "admin"],
-    "CONFIRMADO": ["pedidos", "cocina", "admin"],
-    "EN_PREP": ["cocina", "pedidos", "admin"],
-    "ENTREGADO": ["pedidos", "admin"],
-    "CANCELADO": ["pedidos", "cocina", "admin"],
+    "PENDIENTE": ["PEDIDOS", "ADMIN"],
+    "CONFIRMADO": ["PEDIDOS", "ADMIN"],
+    "EN_PREP": ["PEDIDOS", "ADMIN"],
+    "ENTREGADO": ["PEDIDOS", "ADMIN"],
+    "CANCELADO": ["PEDIDOS", "ADMIN"],
 }
 
 
@@ -269,9 +270,28 @@ class PedidoService:
         pedidos = self.uow.pedidos.list_by_usuario(usuario_id)
         return [self._to_public(p.id) for p in pedidos]
 
-    def listar_todos(self, estado_codigo: Optional[str] = None) -> List[PedidoPublic]:
-        pedidos = self.uow.pedidos.list_all_active(estado_codigo=estado_codigo)
-        return [self._to_public(p.id) for p in pedidos]
+    def listar_todos(
+        self,
+        estado_codigo: Optional[str] = None,
+        page: int = 1,
+        size: int = 20,
+    ) -> Tuple[List[PedidoPublic], int]:
+        """Devuelve (items, total) para paginación. Spec §5.3."""
+        from sqlmodel import select, func
+        from app.modules.pedidos.models import Pedido
+
+        stmt = select(Pedido).where(Pedido.deleted_at == None)  # noqa: E711
+        count_stmt = select(func.count(Pedido.id)).where(Pedido.deleted_at == None)  # noqa: E711
+
+        if estado_codigo:
+            stmt = stmt.where(Pedido.estado_codigo == estado_codigo)
+            count_stmt = count_stmt.where(Pedido.estado_codigo == estado_codigo)
+
+        total = self.uow.session.exec(count_stmt).one()
+        skip = (page - 1) * size
+        stmt = stmt.order_by(Pedido.created_at.desc()).offset(skip).limit(size)
+        pedidos = list(self.uow.session.exec(stmt).all())
+        return [self._to_public(p.id) for p in pedidos], total
 
     def _get_pedido_or_404(self, pedido_id: int) -> Pedido:
         pedido = self.uow.pedidos.get_by_id(pedido_id)

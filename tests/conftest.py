@@ -36,7 +36,8 @@ from app.core.rate_limit.rate_limit_middleware import RateLimitMiddleware
 from app.core.security import hash_password
 from app.main import app as fastapi_app
 
-# ⚠️ Importar TODOS los modelos ANTES de create_all para que
+# Importar TODOS los modelos ANTES de create_all para que
+
 # SQLModel.metadata los registre. Si falta alguno, la tabla no se crea.
 import app.modules.usuarios.model           # Usuario, Rol, UsuarioRol
 import app.modules.direcciones.models       # DireccionEntrega
@@ -119,7 +120,7 @@ def session_fixture(engine_test):
 # 3. CLIENTE HTTP DE TEST
 # ===========================================================================
 @pytest.fixture(name="client", scope="function")
-def client_fixture(session: Session):
+def client_fixture(session: Session, engine_test):
     """
     TestClient de FastAPI con la DB de test inyectada.
 
@@ -133,11 +134,17 @@ def client_fixture(session: Session):
         return session
 
     fastapi_app.dependency_overrides[get_session] = get_session_override
+    
+    # IMPORTANTE: UoW usa engine directo desde app.core.database.
+    # Necesitamos mockearlo a nivel módulo para que use el engine_test.
+    import app.core.uow
+    original_uow_engine = app.core.uow.engine
+    app.core.uow.engine = engine_test
 
     # Limpiamos el rate limiter para que un test no contamine al siguiente.
     _reset_rate_limit_state()
 
-    # ⚠️ Como la session está overrideada, el lifespan no puede
+    #  Como la session está overrideada, el lifespan no puede
     # insertar datos en la session de test. Creamos el admin DIRECTO.
     _create_test_admin(session)
 
@@ -146,6 +153,7 @@ def client_fixture(session: Session):
 
     # Restauramos el estado original de la app.
     fastapi_app.dependency_overrides.clear()
+    app.core.uow.engine = original_uow_engine
 
 
 def _create_test_admin(session: Session) -> None:
@@ -221,7 +229,7 @@ def _get_admin_auth_headers(client: TestClient) -> dict:
     """
     response = client.post(
         "/api/v1/auth/token",
-        data={  # ⚠️ form, no JSON.
+        data={  #  form, no JSON.
             "username": "admin@test.com",
             "password": "admin123",
         },

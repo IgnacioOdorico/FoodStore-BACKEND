@@ -66,7 +66,7 @@ class Settings(BaseSettings):
 
     # Frontend / API (usadas para back_urls y redirects post-pago)
     VITE_API_URL: str = "http://localhost:8000"
-    VITE_FRONTEND_URL: str = "http://localhost:5173"
+    VITE_FRONTEND_URL: str = "http://localhost:5174"
 
     # ─── Cloudinary ──────────────────────────────────────────────────────────
     CLOUDINARY_CLOUD_NAME: str = ""

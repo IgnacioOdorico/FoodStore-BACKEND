@@ -1,6 +1,7 @@
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+import math
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import require_role
@@ -10,29 +11,34 @@ from app.modules.producto.schemas import (
     ProductoUpdate,
     ProductoDisponibilidadUpdate,
     ProductoReadWithDetails,
+    PaginatedProductos,
 )
 from app.modules.producto.service import ProductoService
 
 router = APIRouter(prefix="/api/v1/productos", tags=["Productos"])
 
 
-@router.get("/", response_model=List[ProductoReadWithDetails])
+@router.get("/", response_model=PaginatedProductos)
 def list_productos(
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     nombre: Annotated[Optional[str], Query(description="Búsqueda por texto en nombre")] = None,
     disponible: Annotated[Optional[bool], Query(description="Filtrar por disponibilidad")] = None,
     categoria_id: Annotated[Optional[int], Query(description="Filtrar por categoría")] = None,
-    skip: Annotated[int, Query(ge=0, description="Paginación: offset")] = 0,
-    limit: Annotated[int, Query(ge=1, le=200, description="Paginación: tamaño página")] = 50,
+    page: Annotated[int, Query(ge=1, description="Número de página")] = 1,
+    size: Annotated[int, Query(ge=1, le=100, description="Tamaño de página")] = 20,
 ):
+    """Listar productos con paginación. Respuesta: {items, total, page, size, pages}."""
+    skip = (page - 1) * size
     with uow:
-        return ProductoService(uow).list_productos(
+        items, total = ProductoService(uow).list_productos(
             nombre=nombre,
             disponible=disponible,
             categoria_id=categoria_id,
             skip=skip,
-            limit=limit,
+            limit=size,
         )
+    pages = max(1, math.ceil(total / size))
+    return PaginatedProductos(items=items, total=total, page=page, size=size, pages=pages)
 
 
 @router.get("/{id}", response_model=ProductoReadWithDetails)

@@ -76,3 +76,13 @@ class PedidoPublic(SQLModel):
     pago: Optional[PagoRead] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedPedidos(SQLModel):
+    """Respuesta paginada del spec §5.3: GET /api/v1/pedidos"""
+    items: List[PedidoPublic]
+    total: int
+    page: int
+    size: int
+    pages: int
+

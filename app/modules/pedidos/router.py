@@ -1,4 +1,5 @@
 import json
+import math
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, Query, status, WebSocket, WebSocketDisconnect
@@ -12,6 +13,7 @@ from app.modules.usuarios.schemas import UserPublic
 from app.modules.pedidos.schemas import (
     PedidoCreate,
     PedidoPublic,
+    PaginatedPedidos,
     AvanzarEstadoRequest,
     CancelarRequest,
     HistorialPublic,
@@ -77,14 +79,18 @@ def obtener_historial(
 
 
 
-@router.get("/admin/listado", response_model=List[PedidoPublic])
+@router.get("/admin/listado", response_model=PaginatedPedidos)
 def listar_todos_pedidos(
     _staff: Annotated[UserPublic, Depends(require_role(["ADMIN", "PEDIDOS"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     estado: Annotated[Optional[str], Query(description="Filtrar por estado_codigo")] = None,
+    page: Annotated[int, Query(ge=1, description="Número de página")] = 1,
+    size: Annotated[int, Query(ge=1, le=100, description="Tamaño de página")] = 20,
 ):
     with uow:
-        return PedidoService(uow).listar_todos(estado_codigo=estado)
+        items, total = PedidoService(uow).listar_todos(estado_codigo=estado, page=page, size=size)
+    pages = max(1, math.ceil(total / size))
+    return PaginatedPedidos(items=items, total=total, page=page, size=size, pages=pages)
 
 
 @router.patch("/{pedido_id}/avanzar", response_model=PedidoPublic)
@@ -158,7 +164,8 @@ async def avanzar_estado(
 
 # Roles de staff que pueden gestionar pedidos.
 # Se usan para decidir si se valida propiedad del pedido en subscribe-order.
-STAFF_ROLES = {"ADMIN", "PEDIDOS", "COCINA"}
+STAFF_ROLES = {"ADMIN", "PEDIDOS"}
+
 
 
 @router.websocket("/ws")

@@ -216,7 +216,7 @@ class PaymentService:
             or query_params.get("data.id")
             or query_params.get("id")
         )
-        pago_mp_id = data.get("id") or data_id
+        pago_mp_id = data_id or data.get("id")
 
         if not pago_mp_id:
             return {"status": "ignored", "reason": "sin payment id"}

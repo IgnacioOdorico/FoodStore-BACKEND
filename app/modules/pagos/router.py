@@ -34,12 +34,46 @@ def crear_pago(
         return PaymentService(uow).crear_pago(current_user.id, data.pedido_id)
 
 
+import hmac
+import hashlib
+
+def _verify_hmac(request: Request, data_id: str) -> bool:
+    """Valida la firma HMAC de MercadoPago."""
+    if not settings.MP_WEBHOOK_SECRET:
+        logger.warning("MP_WEBHOOK_SECRET no configurado, omitiendo validación HMAC")
+        return True
+        
+    x_signature = request.headers.get("x-signature")
+    x_request_id = request.headers.get("x-request-id")
+    
+    if not x_signature or not x_request_id:
+        logger.warning("Faltan headers x-signature o x-request-id en webhook de MP")
+        return False
+        
+    try:
+        parts = dict(p.split("=") for p in x_signature.split(","))
+        ts = parts.get("ts")
+        v1 = parts.get("v1")
+        
+        if not ts or not v1:
+            return False
+            
+        manifest = f"id:{data_id};request-id:{x_request_id};ts:{ts};"
+        hmac_calc = hmac.new(
+            settings.MP_WEBHOOK_SECRET.encode(),
+            manifest.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return hmac.compare_digest(hmac_calc, v1)
+    except Exception:
+        return False
+
 @router.post("/webhook")
 async def webhook(
     request: Request,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
-
     try:
         query_params = dict(request.query_params)
         ctype = request.headers.get("content-type", "")
@@ -50,6 +84,18 @@ async def webhook(
                 data = dict(await request.form())
             except Exception:
                 data = {}
+                
+        # Extraer el ID para validación HMAC
+        data_id = str(data.get("data", {}).get("id", ""))
+        if not data_id:
+            data_id = str(query_params.get("data.id", ""))
+            
+        if data_id and not _verify_hmac(request, data_id):
+            logger.error("Validación HMAC fallida en webhook de MP")
+            # Devolvemos 200 para que MP no reintente un payload modificado,
+            # o podríamos devolver 403. MP recomienda 200 o 400.
+            return {"status": "error", "reason": "invalid_signature"}
+
         with uow:
             return await PaymentService(uow).procesar_webhook(
                 data, query_params=query_params
@@ -71,9 +117,9 @@ async def confirm_pago(
 
 @router.get("/redirect/{pedido_id}/{estado}")
 def redirect_post_pago(pedido_id: int, estado: str, request: Request):
-    frontend = settings.VITE_FRONTEND_URL or "http://localhost:5173"
+    frontend = settings.VITE_FRONTEND_URL or "http://localhost:5174"
     qs = request.url.query
-    url = f"{frontend}/orders/{pedido_id}/{estado}"
+    url = f"{frontend}/orders"
     if qs:
         url += f"?{qs}"
     return RedirectResponse(url=url)

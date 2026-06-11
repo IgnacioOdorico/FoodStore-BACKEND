@@ -8,6 +8,21 @@ if TYPE_CHECKING:
 from sqlmodel import Field, Relationship, SQLModel
 
 
+class RefreshToken(SQLModel, table=True):
+    """
+    Tabla de refresh tokens para logout real con revocación.
+    Spec §4.1: POST /auth/logout marca el refresh token como revoked_at.
+    """
+    __tablename__ = "refresh_token"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuario.id", index=True, nullable=False)
+    token_hash: str = Field(max_length=255, unique=True, nullable=False, index=True)
+    expires_at: datetime = Field(nullable=False)
+    revoked_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class UsuarioRol(SQLModel, table=True):
     __tablename__ = "usuario_rol"
 

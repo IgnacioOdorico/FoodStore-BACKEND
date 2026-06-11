@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import EmailStr
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Field
 
 
 class UserCreate(SQLModel):
@@ -10,7 +10,7 @@ class UserCreate(SQLModel):
     apellido: str
     email: EmailStr
     celular: Optional[str] = None
-    password: str
+    password: str = Field(min_length=8)
 
 
 class UserPublic(SQLModel):
@@ -58,7 +58,7 @@ class AdminUserCreate(SQLModel):
     nombre: str
     apellido: str
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     celular: Optional[str] = None
     roles: List[str] = ["STOCK"]
 

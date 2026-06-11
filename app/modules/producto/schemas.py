@@ -66,3 +66,12 @@ class IngredienteConExtra(IngredienteRead):
 class ProductoReadWithDetails(ProductoRead):
     categorias:   List[CategoriaConExtra] = []
     ingredientes: List[IngredienteConExtra] = []
+
+
+class PaginatedProductos(BaseModel):
+    """Respuesta paginada del spec §5.2: GET /api/v1/productos"""
+    items: List[ProductoReadWithDetails]
+    total: int
+    page: int
+    size: int
+    pages: int

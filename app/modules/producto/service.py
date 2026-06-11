@@ -1,8 +1,8 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from fastapi import HTTPException, status
-from sqlmodel import select
+from sqlmodel import select, func
 
 from app.core.uow import UnitOfWork
 from app.modules.producto.models import Producto
@@ -24,14 +24,18 @@ class ProductoService:
         disponible: Optional[bool] = None,
         categoria_id: Optional[int] = None,
         skip: int = 0,
-        limit: int = 100,
-    ) -> List[ProductoReadWithDetails]:
+        limit: int = 20,
+    ) -> Tuple[List[ProductoReadWithDetails], int]:
+        """Devuelve (items, total) para paginación según spec §5.2."""
         statement = select(Producto).where(Producto.deleted_at == None)  # noqa: E711
+        count_stmt = select(func.count(Producto.id)).where(Producto.deleted_at == None)  # noqa: E711
 
         if nombre:
             statement = statement.where(Producto.nombre.contains(nombre))
+            count_stmt = count_stmt.where(Producto.nombre.contains(nombre))
         if disponible is not None:
             statement = statement.where(Producto.disponible == disponible)
+            count_stmt = count_stmt.where(Producto.disponible == disponible)
 
         if categoria_id is not None:
             statement = (
@@ -39,10 +43,15 @@ class ProductoService:
                 .where(ProductoCategoria.categoria_id == categoria_id)
                 .distinct()
             )
+            count_stmt = (
+                count_stmt.join(ProductoCategoria, ProductoCategoria.producto_id == Producto.id)
+                .where(ProductoCategoria.categoria_id == categoria_id)
+            )
 
+        total = self.uow.session.exec(count_stmt).one()
         statement = statement.offset(skip).limit(limit)
         items = self.uow.session.exec(statement).all()
-        return [self._get_with_details(i.id) for i in items]
+        return [self._get_with_details(i.id) for i in items], total
 
     def get_producto(self, id: int) -> Optional[ProductoReadWithDetails]:
         producto = self.uow.productos.get_by_id(id)
