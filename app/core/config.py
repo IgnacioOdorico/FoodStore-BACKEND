@@ -80,10 +80,10 @@ class Settings(BaseSettings):
     # ─── Rate Limiting ───────────────────────────────────────────────────────
     # Límite por defecto: peticiones por minuto por cliente identificado.
     RATE_LIMIT_DEFAULT_PER_MINUTE: int = 60
-    RATE_LIMIT_DEFAULT_BURST: int = 10
+    RATE_LIMIT_DEFAULT_BURST: int = 100
     # Límite estricto para endpoints de autenticación (mitiga fuerza bruta).
     RATE_LIMIT_AUTH_PER_MINUTE: int = 5
-    RATE_LIMIT_AUTH_BURST: int = 3
+    RATE_LIMIT_AUTH_BURST: int = 20
 
     # ─── CORS ────────────────────────────────────────────────────────────────
     # Orígenes permitidos para el frontend. Lista separada por comas en .env.
