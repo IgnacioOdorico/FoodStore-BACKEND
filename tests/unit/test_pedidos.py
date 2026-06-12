@@ -2,14 +2,6 @@
 tests/unit/test_pedidos.py
 ===========================
 Tests de la lógica de pedidos: FSM, audit trail, reglas de negocio.
-
-Spec §3.4: Máquina de estados (FSM) de 5 estados
-Spec §5.3: Módulo Pedidos
-RN-01: estado terminal no admite transiciones
-RN-02: primer historial con estado_desde=NULL
-RN-03: historial append-only
-RN-05: motivo obligatorio en CANCELADO
-RN-06: WS broadcast post-commit
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -118,10 +110,10 @@ class TestCrearPedido:
         assert data["estado_codigo"] == "PENDIENTE"
         assert data["total"] > 0
 
-    def test_crear_pedido_RN02_primer_historial_estado_desde_null(
+    def test_crear_pedido_primer_historial_estado_desde_null(
         self, client: TestClient, session: Session
     ):
-        """RN-02: El primer registro de historial siempre tiene estado_desde=NULL."""
+        """El primer registro de historial siempre tiene estado_desde=NULL."""
         prod_id, forma_pago = _seed_catalogo(session)
         headers = _login_cliente(client)
 
@@ -141,7 +133,7 @@ class TestCrearPedido:
             select(HistorialEstadoPedido).where(HistorialEstadoPedido.pedido_id == pedido_id)
         ).all()
         assert len(historial) >= 1
-        # El primer registro debe tener estado_desde=NULL (RN-02)
+        # El primer registro debe tener estado_desde=NULL
         primer = min(historial, key=lambda h: h.created_at)
         assert primer.estado_desde is None
         assert primer.estado_hacia == "PENDIENTE"
@@ -206,7 +198,7 @@ class TestAvanzarEstado:
     def test_avanzar_estado_invalido_retorna_409(
         self, client: TestClient, session: Session, admin_auth_headers: dict
     ):
-        """RN-01: Una transición inválida según la FSM retorna 409."""
+        """Una transición inválida según la FSM retorna 409."""
         prod_id, forma_pago = _seed_catalogo(session)
         headers_cliente = _login_cliente(client)
 
@@ -232,7 +224,7 @@ class TestAvanzarEstado:
     def test_cancelar_sin_motivo_retorna_400(
         self, client: TestClient, session: Session, admin_auth_headers: dict
     ):
-        """RN-05: Cancelar sin motivo retorna 400."""
+        """Cancelar sin motivo retorna 400."""
         prod_id, forma_pago = _seed_catalogo(session)
         headers_cliente = _login_cliente(client)
 
@@ -257,7 +249,7 @@ class TestAvanzarEstado:
     def test_cancelar_con_motivo_ok(
         self, client: TestClient, session: Session, admin_auth_headers: dict
     ):
-        """RN-05: Cancelar con motivo funciona correctamente."""
+        """Cancelar con motivo funciona correctamente."""
         prod_id, forma_pago = _seed_catalogo(session)
         headers_cliente = _login_cliente(client)
 
@@ -282,7 +274,7 @@ class TestAvanzarEstado:
 
 
 class TestHistorial:
-    """GET /api/v1/pedidos/{id}/historial — Spec §5.3, RN-03"""
+    """GET /api/v1/pedidos/{id}/historial"""
 
     def test_historial_retorna_lista_ordenada(
         self, client: TestClient, session: Session, admin_auth_headers: dict
@@ -316,9 +308,9 @@ class TestHistorial:
         assert response.status_code == 200
         historial = response.json()
         assert len(historial) >= 2  # PENDIENTE + CONFIRMADO
-        # El primero debe tener estado_hacia=PENDIENTE (RN-02)
+        # El primero debe tener estado_hacia=PENDIENTE
         assert historial[0]["estado_hacia"] == "PENDIENTE"
-        assert historial[0]["estado_desde"] is None  # RN-02
+        assert historial[0]["estado_desde"] is None
 
 
 class TestPaginacion:

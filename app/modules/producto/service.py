@@ -26,7 +26,7 @@ class ProductoService:
         skip: int = 0,
         limit: int = 20,
     ) -> Tuple[List[ProductoReadWithDetails], int]:
-        """Devuelve (items, total) para paginación según spec §5.2."""
+        """Devuelve (items, total) para paginación."""
         statement = select(Producto).where(Producto.deleted_at == None)  # noqa: E711
         count_stmt = select(func.count(Producto.id)).where(Producto.deleted_at == None)  # noqa: E711
 

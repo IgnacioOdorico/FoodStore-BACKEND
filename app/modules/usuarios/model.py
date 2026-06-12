@@ -11,7 +11,6 @@ from sqlmodel import Field, Relationship, SQLModel
 class RefreshToken(SQLModel, table=True):
     """
     Tabla de refresh tokens para logout real con revocación.
-    Spec §4.1: POST /auth/logout marca el refresh token como revoked_at.
     """
     __tablename__ = "refresh_token"
 

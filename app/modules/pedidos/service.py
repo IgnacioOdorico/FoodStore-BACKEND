@@ -276,7 +276,7 @@ class PedidoService:
         page: int = 1,
         size: int = 20,
     ) -> Tuple[List[PedidoPublic], int]:
-        """Devuelve (items, total) para paginación. Spec §5.3."""
+        """Devuelve (items, total) para paginación."""
         from sqlmodel import select, func
         from app.modules.pedidos.models import Pedido
 

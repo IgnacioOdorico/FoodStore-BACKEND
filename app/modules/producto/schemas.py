@@ -69,7 +69,7 @@ class ProductoReadWithDetails(ProductoRead):
 
 
 class PaginatedProductos(BaseModel):
-    """Respuesta paginada del spec §5.2: GET /api/v1/productos"""
+    """Respuesta paginada."""
     items: List[ProductoReadWithDetails]
     total: int
     page: int

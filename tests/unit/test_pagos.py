@@ -2,13 +2,6 @@
 tests/unit/test_pagos.py
 ========================
 Tests de la integración de pagos con MercadoPago.
-
-Spec §8: Integración MercadoPago
-Spec §5.4: Módulo Pagos
-- idempotency_key único por intento
-- Estado del pedido cambia a CONFIRMADO al aprobar pago
-- Webhook procesa topic=payment correctamente
-- Solo el propietario puede ver su pago
 """
 import pytest
 from unittest.mock import patch, MagicMock

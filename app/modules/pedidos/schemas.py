@@ -79,7 +79,7 @@ class PedidoPublic(SQLModel):
 
 
 class PaginatedPedidos(SQLModel):
-    """Respuesta paginada del spec §5.3: GET /api/v1/pedidos"""
+    """Respuesta paginada."""
     items: List[PedidoPublic]
     total: int
     page: int

@@ -99,7 +99,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FoodStore API",
     version="2.0.0",
-    description="FoodStore — Backend Parcial 2 (FastAPI + SQLModel) alineado al ERD v6.",
+    description="FoodStore — Backend (FastAPI + SQLModel).",
     lifespan=lifespan,
 )
 

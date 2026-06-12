@@ -1,7 +1,6 @@
 """
 Dependencias de autenticación y autorización para FastAPI.
 
-Adaptado al ERD v5:
 - Extrae identidad vía 'email' (claim 'sub').
 - Valida RBAC contra la lista de roles del usuario.
 """

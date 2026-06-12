@@ -3,10 +3,6 @@ tests/unit/test_auth.py
 ========================
 Tests de la capa de autenticación y autorización.
 Cubre: register, login, logout, /me, rate limiting, JWT.
-
-Spec §4.1: Flujo de autenticación
-Spec §4.2: Roles y permisos RBAC
-Spec §4.3: Rate Limiting
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -118,7 +114,7 @@ class TestLogout:
 
 
 class TestRBAC:
-    """Verifica que los endpoints respetan los roles — Spec §4.2"""
+    """Verifica que los endpoints respetan los roles."""
 
     def test_cliente_no_puede_crear_productos(self, client: TestClient):
         """Un usuario CLIENT no puede crear productos (requiere ADMIN)."""

@@ -1,5 +1,5 @@
 """
-Seed — FoodStore (ERD v7).
+Seed — FoodStore.
 
 Carga:
   1.  Roles                (ADMIN, STOCK, PEDIDOS, CLIENT)
@@ -52,7 +52,7 @@ def _upsert(session: Session, model, key_field: str, key_value, defaults: dict):
 
 
 def run() -> None:
-    print("Sembrando datos (FoodStore ERD v7)...")
+    print("Sembrando datos...")
     create_all_tables()
 
     with Session(engine) as session:
@@ -322,7 +322,7 @@ def run() -> None:
                 personalizacion=None,
             ))
 
-            # Audit trail — RN-02: estado_desde NULL
+            # Audit trail
             session.add(HistorialEstadoPedido(
                 pedido_id=pedido.id,
                 estado_desde=None,

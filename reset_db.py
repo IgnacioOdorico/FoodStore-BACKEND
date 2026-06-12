@@ -31,7 +31,7 @@ def main() -> None:
             conn.execute(text(f"DROP TABLE IF EXISTS {tbl} CASCADE"))
         conn.commit()
 
-    print("Creating all tables (ERD v7)...")
+    print("Creating all tables...")
     create_all_tables()
     print("Done!")
 
