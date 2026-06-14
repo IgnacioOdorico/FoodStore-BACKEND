@@ -20,7 +20,7 @@ class ProductoIngrediente(SQLModel, table=True):
     ingrediente_id:   int  = Field(foreign_key="ingrediente.id", primary_key=True)
 
     cantidad:         float = Field(nullable=False)  # DECIMAL(10,3) en PG
-    unidad_medida_id: Optional[int] = Field(default=None, foreign_key="unidad_medida.id")
+    unidad_medida_id: int = Field(foreign_key="unidad_medida.id")
     es_removible:     bool  = Field(default=False, nullable=False)
 
     created_at:       datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

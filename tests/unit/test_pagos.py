@@ -208,7 +208,6 @@ class TestWebhook:
             "mp_payment_id": 999888777,
             "mp_status": "approved",
             "mp_status_detail": "accredited",
-            "mp_merchant_order_id": None,
             "payment_method_id": "visa",
             "external_reference": external_ref,
         }

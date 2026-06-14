@@ -44,6 +44,7 @@ from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.pedidos.router import router as pedidos_router
 from app.modules.pagos.router import router as pagos_router
 from app.modules.uploads.router import router as uploads_router
+from app.modules.estadisticas.router import router as estadisticas_router
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +163,7 @@ app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
 app.include_router(pagos_router)
 app.include_router(uploads_router)
+app.include_router(estadisticas_router)
 
 
 # ---------------------------------------------------------------------------
