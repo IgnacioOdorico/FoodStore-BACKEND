@@ -20,7 +20,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.database import create_all_tables
 from app.core.config import settings
 
 # Logger (portado de api_middlewares_testing)
@@ -79,14 +78,6 @@ async def lifespan(app: FastAPI):
         "app.startup — FoodStore API v%s [env: production]",
         "2.0.0",
     )
-
-    try:
-        create_all_tables()
-        logger.info("db.tables_created")
-    except Exception as e:
-        # En tests, la BD de producción no está disponible.
-        # conftest.py crea las tablas con SQLite en memoria.
-        logger.warning("db.create_tables.skipped: %s", e)
 
     yield  # ← La app queda escuchando requests acá.
 
