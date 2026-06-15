@@ -245,7 +245,12 @@ class PaymentService:
         if not pago:
             return {"status": "ignored", "reason": "pago no encontrado"}
 
-        if pago.estado != "pendiente":
+        es_mismo_pago = pago.mp_payment_id == int(pago_mp_id)
+        
+        if pago.estado == "aprobado" and nuevo_estado != "aprobado" and not es_mismo_pago:
+            return {"status": "ok", "detail": "ya existe un intento aprobado", "estado": pago.estado}
+            
+        if pago.estado == nuevo_estado and es_mismo_pago:
             return {"status": "ok", "detail": "ya procesado", "estado": pago.estado}
 
         pago.mp_payment_id = int(pago_mp_id)
@@ -293,16 +298,26 @@ class PaymentService:
         pago = self.uow.pagos.get_by_mp_payment_id(int(resolved))
         if not pago:
             pago = self.uow.pagos.get_ultimo_by_pedido(pedido_id)
-        if pago and pago.estado == "pendiente":
-            pago.mp_payment_id = int(resolved)
-            pago.mp_status = mp_info.get("mp_status")
-            pago.mp_status_detail = mp_info.get("mp_status_detail")
-            pago.mp_merchant_order_id = mp_info.get("mp_merchant_order_id")
-            pago.payment_method_id = mp_info.get("payment_method_id")
-            pago.estado = nuevo_estado
-            pago.updated_at = datetime.now(timezone.utc)
-            self.uow.pagos.update(pago)
-            await self._sincronizar_pedido(pago, nuevo_estado)
+            
+        if pago:
+            es_mismo_pago = (pago.mp_payment_id == int(resolved))
+            actualizar = True
+            
+            if pago.estado == "aprobado" and nuevo_estado != "aprobado" and not es_mismo_pago:
+                actualizar = False
+            elif pago.estado == nuevo_estado and es_mismo_pago:
+                actualizar = False
+                
+            if actualizar:
+                pago.mp_payment_id = int(resolved)
+                pago.mp_status = mp_info.get("mp_status")
+                pago.mp_status_detail = mp_info.get("mp_status_detail")
+                pago.mp_merchant_order_id = mp_info.get("mp_merchant_order_id")
+                pago.payment_method_id = mp_info.get("payment_method_id")
+                pago.estado = nuevo_estado
+                pago.updated_at = datetime.now(timezone.utc)
+                self.uow.pagos.update(pago)
+                await self._sincronizar_pedido(pago, nuevo_estado)
 
         return PagoEstadoResponse(pedido_id=pedido_id, estado=nuevo_estado)
 
