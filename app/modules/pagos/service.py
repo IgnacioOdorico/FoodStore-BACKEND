@@ -257,8 +257,8 @@ class PaymentService:
         pago.updated_at = datetime.now(timezone.utc)
         self.uow.pagos.update(pago)
 
-        await self._sincronizar_pedido(pago, nuevo_estado)
-        return {"status": "ok", "estado": nuevo_estado, "pedido_id": pago.pedido_id}
+        sincronizado = await self._sincronizar_pedido(pago, nuevo_estado)
+        return {"status": "ok", "estado": nuevo_estado, "pedido_id": pago.pedido_id, "sincronizado": sincronizado}
 
     async def confirmar_pago(
         self, pedido_id: int, payment_id: Optional[int] = None
@@ -331,14 +331,14 @@ class PaymentService:
             )
         return PagoRead.model_validate(pago)
 
-    async def _sincronizar_pedido(self, pago: Pago, nuevo_estado: str) -> None:
+    async def _sincronizar_pedido(self, pago: Pago, nuevo_estado: str) -> bool:
 
         if nuevo_estado != "aprobado":
-            return
+            return False
 
         pedido = self.uow.pedidos.get_by_id(pago.pedido_id)
         if not pedido or pedido.estado_codigo != "PENDIENTE":
-            return
+            return False
 
         from app.modules.pedidos.service import PedidoService
 
@@ -348,3 +348,4 @@ class PaymentService:
             usuario_id=None,
             motivo="Pago aprobado por MercadoPago",
         )
+        return True
