@@ -11,8 +11,7 @@ class ProductoBase(BaseModel):
     stock_cantidad:  int = Field(default=0, ge=0)
     disponible:      bool = True
     unidad_venta_id: Optional[int] = None
-    es_apto_celiaco: bool = False
-    es_apto_vegano:  bool = False
+
 
 
 class IngredienteEnReceta(BaseModel):
@@ -35,8 +34,7 @@ class ProductoUpdate(BaseModel):
     stock_cantidad:      Optional[int] = Field(default=None, ge=0)
     disponible:          Optional[bool] = None
     unidad_venta_id:     Optional[int] = None
-    es_apto_celiaco:     Optional[bool] = None
-    es_apto_vegano:      Optional[bool] = None
+
     categoria_ids:       Optional[List[int]] = None
     ingredientes_receta: Optional[List[IngredienteEnReceta]] = None
 

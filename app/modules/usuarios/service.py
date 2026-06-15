@@ -35,7 +35,7 @@ class UsuarioService:
                 
                 user_db = self.uow.usuarios.update(existing_user)
                 self.uow.usuarios_roles.delete_all_for_user(user_db.id)
-                self.uow.commit()
+                self.uow.session.flush()
         else:
             usuario = Usuario(
                 nombre=user_in.nombre,
@@ -45,21 +45,19 @@ class UsuarioService:
                 password_hash=hash_password(user_in.password),
             )
             user_db = self.uow.usuarios.add(usuario)
-            self.uow.commit() 
+            self.uow.session.flush() 
 
-        # 2. Asignar rol CLIENT por defecto 
         rol_client = self.uow.roles.get_by_codigo("CLIENT")
         if not rol_client:
             from app.modules.usuarios.model import Rol
             rol_client = self.uow.roles.add(Rol(codigo="CLIENT", nombre="Cliente"))
-            self.uow.commit()
+            self.uow.session.flush()
 
         self.uow.usuarios_roles.add(UsuarioRol(
             usuario_id=user_db.id,
             rol_codigo="CLIENT"
         ))
 
-        # 3. Retornar vista pública con roles
         return self._to_public(user_db)
 
     def create_employee(self, data: AdminUserCreate) -> UserPublic:
@@ -70,7 +68,6 @@ class UsuarioService:
                 detail="Debe especificarse al menos un rol",
             )
 
-        # Validar que los roles existan y sean de staff
         STAFF_ROLES = {"ADMIN", "STOCK", "PEDIDOS"}
         for rol_codigo in data.roles:
             if rol_codigo not in STAFF_ROLES:
@@ -79,7 +76,6 @@ class UsuarioService:
                     detail=f"Rol no permitido para empleados: {rol_codigo}",
                 )
 
-        # Validar que no haya más de un ADMIN
         if "ADMIN" in data.roles:
             existing_admin = self.uow.usuarios.get_admin()
             if existing_admin:
@@ -105,7 +101,7 @@ class UsuarioService:
                 
                 user_db = self.uow.usuarios.update(existing_user)
                 self.uow.usuarios_roles.delete_all_for_user(user_db.id)
-                self.uow.commit()
+                self.uow.session.flush()
         else:
             usuario = Usuario(
                 nombre=data.nombre,
@@ -115,7 +111,7 @@ class UsuarioService:
                 password_hash=hash_password(data.password),
             )
             user_db = self.uow.usuarios.add(usuario)
-            self.uow.commit()
+            self.uow.session.flush()
 
         for rol_codigo in data.roles:
             self.uow.usuarios_roles.add(UsuarioRol(
@@ -182,7 +178,6 @@ class UsuarioService:
                 detail="Usuario no encontrado",
             )
 
-        # Campos básicos
         if data.nombre is not None:
             user.nombre = data.nombre
         if data.apellido is not None:
@@ -190,7 +185,6 @@ class UsuarioService:
         if data.celular is not None:
             user.celular = data.celular
 
-        # Cambio de email — verificar unicidad
         if data.email is not None and data.email != user.email:
             existing = self.uow.usuarios.get_by_email_any(data.email)
             if existing and existing.id != user_id:
@@ -203,12 +197,10 @@ class UsuarioService:
         user.updated_at = datetime.now(timezone.utc)
         updated = self.uow.usuarios.update(user)
 
-        # Cambio de roles — reemplazar todos los roles actuales
         if data.roles is not None:
-            # Validar que no se asigne ADMIN si ya existe otro admin
             if "ADMIN" in data.roles:
                 current_roles = self.uow.usuarios.get_roles_codes(user_id)
-                if "ADMIN" not in current_roles:  # Solo validar si está intentando AGREGAR admin
+                if "ADMIN" not in current_roles:
                     existing_admin = self.uow.usuarios.get_admin()
                     if existing_admin:
                         raise HTTPException(

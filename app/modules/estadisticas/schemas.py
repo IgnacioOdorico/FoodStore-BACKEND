@@ -1,40 +1,36 @@
-from typing import List, Dict, Any, Optional
+from decimal import Decimal
+from typing import List, Dict
 from pydantic import BaseModel
 
-class ResumenKpis(BaseModel):
-    total_ingresos: float
-    total_pedidos: int
-    ticket_promedio: float
+class ResumenResponse(BaseModel):
+    ventas_hoy: Decimal
+    ticket_promedio: Decimal
+    pedidos_activos: int
+    mes_actual: Decimal
 
 class VentasPeriodoItem(BaseModel):
     fecha: str
-    fechaLabel: str
-    ingresos: float
+    ingresos: Decimal
     cantidad: int
+
+class VentasPeriodoResponse(BaseModel):
+    items: List[VentasPeriodoItem]
 
 class ProductoTopItem(BaseModel):
     nombre: str
     cantidad: int
-    ingresos: float
+    ingresos: Decimal
 
-class ResumenStock(BaseModel):
-    bajo: int
-    sinStock: int
-    normal: int
-    total: int
+class ProductosTopResponse(BaseModel):
+    items: List[ProductoTopItem]
 
-class DashboardResponse(BaseModel):
-    totalCategorias: int
-    totalProductos: int
-    totalIngredientes: int
-    totalPedidos: int
-    totalUsuarios: Optional[int] = None
-    pedidosPorEstado: Dict[str, int]
-    pedidosPorFormaPago: Dict[str, int]
-    ordenesRecientes: List[Any]
-    productosStockBajo: List[Any]
-    ingredientesStockBajo: List[Any]
-    pedidosPorDia: List[VentasPeriodoItem]
-    topProductos: List[ProductoTopItem]
-    productosConCategoria: List[Any]
-    resumenStock: ResumenStock
+class PedidosEstadoResponse(BaseModel):
+    items: Dict[str, int]
+
+class IngresosItem(BaseModel):
+    forma_pago_codigo: str
+    ingresos: Decimal
+
+class IngresosResponse(BaseModel):
+    items: List[IngresosItem]
+    total: Decimal
