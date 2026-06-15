@@ -3,7 +3,8 @@ from app.core.uow import UnitOfWork
 from app.modules.estadisticas.repository import EstadisticasRepository
 from app.modules.estadisticas.schemas import (
     ResumenResponse, VentasPeriodoResponse,
-    ProductosTopResponse, PedidosEstadoResponse, IngresosResponse
+    ProductosTopResponse, PedidosEstadoResponse, IngresosResponse,
+    DashboardResponse, ResumenStockResponse, ProductoTopItem,
 )
 
 class EstadisticasService:
@@ -30,3 +31,14 @@ class EstadisticasService:
         items = self.repository.get_ingresos_por_forma_pago(desde, hasta)
         total = sum([item["ingresos"] for item in items])
         return IngresosResponse(items=items, total=total)
+
+    def get_dashboard(self) -> DashboardResponse:
+        data = self.repository.get_dashboard()
+        return DashboardResponse(
+            totalProductos=data["totalProductos"],
+            totalPedidos=data["totalPedidos"],
+            totalUsuarios=data["totalUsuarios"],
+            pedidosPorEstado=data["pedidosPorEstado"],
+            topProductos=[ProductoTopItem(**p) for p in data["topProductos"]],
+            resumenStock=ResumenStockResponse(**data["resumenStock"]),
+        )

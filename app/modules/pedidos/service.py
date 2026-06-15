@@ -47,8 +47,9 @@ ESTADOS_CANCELABLES_POR_CLIENTE = {"PENDIENTE", "CONFIRMADO"}
 
 
 class PedidoService:
-    def __init__(self, uow: UnitOfWork):
+    def __init__(self, uow: UnitOfWork, ws_manager=None):
         self.uow = uow
+        self._ws_manager = ws_manager
 
     def crear_pedido(self, usuario_id: int, data: PedidoCreate) -> PedidoPublic:
 
@@ -134,11 +135,10 @@ class PedidoService:
             notas=data.notas,
         )
         self.uow.pedidos.add(pedido)
-        self.uow.session.flush()
 
         for d in items:
             d.pedido_id = pedido.id
-            self.uow.session.add(d)
+            self.uow.detalles_pedidos.add(d)
 
         self.uow.historial_pedidos.add(
             HistorialEstadoPedido(
@@ -165,6 +165,10 @@ class PedidoService:
         pedido = self._get_pedido_or_404(pedido_id)
 
         estado_desde = pedido.estado_codigo
+        
+        if estado_desde == estado_hacia:
+            return self._to_public(pedido.id)
+            
         permitidos = FSM.get(estado_desde, set())
 
         if estado_hacia not in permitidos:
@@ -218,6 +222,9 @@ class PedidoService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tenés permiso para cancelar este pedido",
             )
+            
+        if pedido.estado_codigo == "CANCELADO":
+            return self._to_public(pedido.id)
 
         if pedido.estado_codigo not in ESTADOS_CANCELABLES_POR_CLIENTE:
             raise HTTPException(
@@ -305,6 +312,20 @@ class PedidoService:
             pago=pago,
         )
 
+    async def emit_ws_event(self, result: PedidoPublic, estado_hacia: str) -> None:
+        """Emite el evento WebSocket correspondiente al cambio de estado."""
+
+        if not self._ws_manager:
+            return
+        event_type = EVENTOS_WS.get(estado_hacia)
+        if not event_type:
+            return
+        data_ws = _pedido_to_ws_dict(result)
+        await self._ws_manager.broadcast_to_order(result.id, event_type, data_ws)
+        roles = ROLES_POR_TRANSICION.get(estado_hacia, [])
+        if roles:
+            await self._ws_manager.broadcast_to_roles(roles, event_type, data_ws)
+
 
 def _pedido_to_ws_dict(pedido: PedidoPublic) -> dict[str, Any]:
 
@@ -313,7 +334,7 @@ def _pedido_to_ws_dict(pedido: PedidoPublic) -> dict[str, Any]:
         "usuario_id": pedido.usuario_id,
         "estado_codigo": pedido.estado_codigo,
         "forma_pago_codigo": pedido.forma_pago_codigo,
-        "total": pedido.total,
+        "total": float(pedido.total),
         "notas": pedido.notas,
         "created_at": pedido.created_at.isoformat(),
         "updated_at": pedido.updated_at.isoformat(),

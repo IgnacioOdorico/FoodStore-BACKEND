@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import List, Optional, TYPE_CHECKING
 
 from pydantic import ConfigDict
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, Numeric
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -22,10 +23,10 @@ class Pedido(SQLModel, table=True):
     estado_codigo:     str = Field(foreign_key="estado_pedido.codigo", nullable=False, max_length=20)
     forma_pago_codigo: str = Field(foreign_key="forma_pago.codigo", nullable=False, max_length=20)
 
-    subtotal:    float = Field(nullable=False)
-    descuento:   float = Field(default=0.0, nullable=False)
-    costo_envio: float = Field(default=0.0, nullable=False)
-    total:       float = Field(nullable=False)
+    subtotal:    Decimal = Field(sa_type=Numeric(10, 2), nullable=False)
+    descuento:   Decimal = Field(sa_type=Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    costo_envio: Decimal = Field(sa_type=Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    total:       Decimal = Field(sa_type=Numeric(10, 2), nullable=False)
 
     notas:       Optional[str] = Field(default=None)
 

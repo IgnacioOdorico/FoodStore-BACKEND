@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Numeric
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -13,7 +14,7 @@ class Pago(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     pedido_id: int = Field(foreign_key="pedido.id", index=True, nullable=False)
-    transaction_amount: float = Field(nullable=False)
+    transaction_amount: Decimal = Field(sa_type=Numeric(10, 2), nullable=False)
     estado: str = Field(default="pendiente", max_length=20, nullable=False)
     mp_preference_id: Optional[str] = Field(default=None, max_length=100)
     mp_init_point: Optional[str] = Field(default=None, max_length=255)

@@ -1,10 +1,11 @@
 from typing import Dict, Any, List
 from datetime import date
+from decimal import Decimal
 from sqlmodel import Session, select, func
 from sqlalchemy import cast, Date, desc, or_
-
 from app.modules.pedidos.models import Pedido, DetallePedido
 from app.modules.pagos.models import Pago
+from app.modules.catalogos.models import EstadoPedido
 
 
 class EstadisticasRepository:
@@ -41,10 +42,10 @@ class EstadisticasRepository:
         mes_actual = self.session.scalar(mes_stmt) or 0.0
 
         return {
-            "ventas_hoy": float(ventas_hoy),
-            "ticket_promedio": float(ticket_promedio),
+            "ventas_hoy": Decimal(str(ventas_hoy or 0)),
+            "ticket_promedio": Decimal(str(ticket_promedio or 0)),
             "pedidos_activos": pedidos_activos,
-            "mes_actual": float(mes_actual)
+            "mes_actual": Decimal(str(mes_actual or 0))
         }
 
     def get_ventas_periodo(self, desde: date, hasta: date, agrupacion: str) -> list:
@@ -70,7 +71,7 @@ class EstadisticasRepository:
             .order_by(periodo)
         )
         rows = self.session.exec(stmt).all()
-        return [{"fecha": row[0].isoformat(), "ingresos": float(row[1] or 0.0), "cantidad": row[2]} for row in rows]
+        return [{"fecha": row[0].isoformat(), "ingresos": Decimal(str(row[1] or 0)), "cantidad": row[2]} for row in rows]
 
     def get_productos_top(self, limit: int) -> list:
         stmt = (
@@ -86,7 +87,7 @@ class EstadisticasRepository:
             .limit(limit)
         )
         rows = self.session.exec(stmt).all()
-        return [{"nombre": row[0], "cantidad": row[1], "ingresos": float(row[2] or 0.0)} for row in rows]
+        return [{"nombre": row[0], "cantidad": row[1], "ingresos": Decimal(str(row[2] or 0))} for row in rows]
 
     def get_pedidos_por_estado(self) -> dict:
         stmt = select(Pedido.estado_codigo, func.count(Pedido.id)).where(Pedido.deleted_at == None).group_by(Pedido.estado_codigo)
@@ -112,4 +113,87 @@ class EstadisticasRepository:
             .group_by(Pedido.forma_pago_codigo)
         )
         rows = self.session.exec(stmt).all()
-        return [{"forma_pago_codigo": row[0], "ingresos": float(row[1] or 0.0)} for row in rows]
+        return [{"forma_pago_codigo": row[0], "ingresos": Decimal(str(row[1] or 0))} for row in rows]
+
+    def _get_ventas_por_dia(self, desde: date, hasta: date) -> list:
+        stmt = (
+            select(cast(Pedido.created_at, Date), func.sum(Pedido.total))
+            .where(
+                Pedido.deleted_at == None,
+                Pedido.estado_codigo != "CANCELADO",
+                cast(Pedido.created_at, Date) >= desde,
+                cast(Pedido.created_at, Date) <= hasta,
+            )
+            .group_by(cast(Pedido.created_at, Date))
+            .order_by(cast(Pedido.created_at, Date))
+        )
+        rows = self.session.exec(stmt).all()
+        return [{"fecha": row[0].isoformat(), "ingresos": Decimal(str(row[1] or 0))} for row in rows]
+
+    def get_dashboard(self) -> dict:
+        """
+        Agrega métricas de alto nivel para el panel de control:
+        totalProductos, totalPedidos, totalUsuarios, pedidosPorEstado,
+        topProductos, resumenStock.
+        """
+        from app.modules.producto.models import Producto
+        from app.modules.usuarios.model import Usuario
+
+        total_productos = self.session.scalar(
+            select(func.count(Producto.id)).where(Producto.deleted_at == None)
+        ) or 0
+
+        total_pedidos = self.session.scalar(
+            select(func.count(Pedido.id)).where(Pedido.deleted_at == None)
+        ) or 0
+
+        total_usuarios = self.session.scalar(
+            select(func.count(Usuario.id))
+        ) or 0
+
+        # Pedidos por estado
+        estado_rows = self.session.exec(
+            select(Pedido.estado_codigo, func.count(Pedido.id))
+            .where(Pedido.deleted_at == None)
+            .group_by(Pedido.estado_codigo)
+        ).all()
+        pedidos_por_estado = {row[0]: row[1] for row in estado_rows}
+
+        # Top 5 productos por cantidad vendida (excluyendo CANCELADO)
+        top_stmt = (
+            select(
+                Producto.nombre,
+                func.sum(DetallePedido.cantidad),
+                func.sum(DetallePedido.subtotal_snap),
+            )
+            .join(DetallePedido, Producto.id == DetallePedido.producto_id)
+            .join(Pedido, DetallePedido.pedido_id == Pedido.id)
+            .where(Pedido.estado_codigo != "CANCELADO", Pedido.deleted_at == None)
+            .group_by(Producto.nombre)
+            .order_by(desc(func.sum(DetallePedido.cantidad)))
+            .limit(5)
+        )
+        top_rows = self.session.exec(top_stmt).all()
+        top_productos = [
+            {"nombre": r[0], "cantidad": r[1], "ingresos": Decimal(str(r[2] or 0))}
+            for r in top_rows
+        ]
+
+        # Resumen de stock
+        stock_stmt = select(Producto.stock_cantidad).where(Producto.deleted_at == None)
+        stocks = [r for r in self.session.exec(stock_stmt).all()]
+        resumen_stock = {
+            "total": len(stocks),
+            "sinStock": sum(1 for s in stocks if s == 0),
+            "bajo": sum(1 for s in stocks if 0 < s <= 5),
+            "normal": sum(1 for s in stocks if s > 5),
+        }
+
+        return {
+            "totalProductos": total_productos,
+            "totalPedidos": total_pedidos,
+            "totalUsuarios": total_usuarios,
+            "pedidosPorEstado": pedidos_por_estado,
+            "topProductos": top_productos,
+            "resumenStock": resumen_stock,
+        }

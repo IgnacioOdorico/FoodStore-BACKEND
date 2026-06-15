@@ -30,13 +30,10 @@ async def crear_pedido(
     current_user: Annotated[UserPublic, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    service = PedidoService(uow, ws_manager=manager)
     with uow:
-        result = PedidoService(uow).crear_pedido(current_user.id, data)
-    
-    await manager.broadcast_to_order(result.id, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
-    roles_a_notificar = ROLES_POR_TRANSICION.get("PENDIENTE", [])
-    if roles_a_notificar:
-        await manager.broadcast_to_roles(roles_a_notificar, "PEDIDO_NUEVO", _pedido_to_ws_dict(result))
+        result = service.crear_pedido(current_user.id, data)
+    await service.emit_ws_event(result, "PENDIENTE")
     return result
 
 
@@ -56,16 +53,10 @@ async def cancelar_mi_pedido(
     current_user: Annotated[UserPublic, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    service = PedidoService(uow, ws_manager=manager)
     with uow:
-        result = PedidoService(uow).cancelar_cliente(pedido_id, current_user.id, data.motivo)
-    
-    event_type = EVENTOS_WS.get("CANCELADO")
-    if event_type:
-        data_ws = _pedido_to_ws_dict(result)
-        await manager.broadcast_to_order(pedido_id, event_type, data_ws)
-        roles = ROLES_POR_TRANSICION.get("CANCELADO", [])
-        if roles:
-            await manager.broadcast_to_roles(roles, event_type, data_ws)
+        result = service.cancelar_cliente(pedido_id, current_user.id, data.motivo)
+    await service.emit_ws_event(result, "CANCELADO")
     return result
 
 
@@ -109,37 +100,30 @@ def listar_todos_pedidos(
     return PaginatedPedidos(items=items, total=total, page=page, size=size, pages=pages)
 
 
-@router.patch("/{pedido_id}/avanzar", response_model=PedidoPublic)
+@router.patch("/{pedido_id}/estado", response_model=PedidoPublic)
 async def avanzar_estado(
     pedido_id: int,
     data: AvanzarEstadoRequest,
     staff: Annotated[UserPublic, Depends(require_role(["ADMIN", "PEDIDOS"]))],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    service = PedidoService(uow, ws_manager=manager)
     with uow:
-        result = PedidoService(uow).avanzar_estado(
+        result = service.avanzar_estado(
             pedido_id=pedido_id,
             estado_hacia=data.estado_hacia,
             usuario_id=staff.id,
             motivo=data.motivo,
         )
-    
-    event_type = EVENTOS_WS.get(data.estado_hacia)
-    if event_type:
-        data_ws = _pedido_to_ws_dict(result)
-        await manager.broadcast_to_order(pedido_id, event_type, data_ws)
-        roles = ROLES_POR_TRANSICION.get(data.estado_hacia, [])
-        if roles:
-            await manager.broadcast_to_roles(roles, event_type, data_ws)
+    await service.emit_ws_event(result, data.estado_hacia)
     return result
 
 
 STAFF_ROLES = {"ADMIN", "PEDIDOS"}
+CLIENT_ROLES = {"CLIENT"}
 
-@router.websocket("/ws")
-async def websocket_pedidos(
-    websocket: WebSocket,
-):
+
+async def _ws_handler(websocket: WebSocket, allowed_roles: set[str]) -> None:
     from app.core.websocket import manager
 
     token = websocket.cookies.get("access_token")
@@ -172,6 +156,11 @@ async def websocket_pedidos(
 
         user_roles_set: set[str] = set(repo.get_roles_codes(user.id))
         user_id: int = user.id
+
+        if not user_roles_set.intersection(allowed_roles):
+            await websocket.accept()
+            await websocket.close(code=1008, reason="Rol no autorizado para este canal")
+            return
 
         primary_role = "user"
         for r in ("ADMIN", "PEDIDOS", "COCINA"):
@@ -212,11 +201,7 @@ async def websocket_pedidos(
                             continue
 
                 manager.join_order_room(websocket, order_id)
-
-                await websocket.send_json({
-                    "event": "SUBSCRIBED",
-                    "data": {"order_id": order_id}
-                })
+                await websocket.send_json({"event": "SUBSCRIBED", "data": {"order_id": order_id}})
 
             elif action == "unsubscribe-order":
                 order_id = msg.get("order_id")
@@ -227,3 +212,13 @@ async def websocket_pedidos(
         manager.disconnect(websocket)
     except Exception:
         manager.disconnect(websocket)
+
+
+@router.websocket("/ws")
+async def websocket_pedidos(websocket: WebSocket):
+    await _ws_handler(websocket, allowed_roles=CLIENT_ROLES | STAFF_ROLES)
+
+
+@router.websocket("/ws/admin")
+async def websocket_pedidos_admin(websocket: WebSocket):
+    await _ws_handler(websocket, allowed_roles=STAFF_ROLES)
