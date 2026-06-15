@@ -342,7 +342,7 @@ class PaymentService:
 
         from app.modules.pedidos.service import PedidoService
 
-        await PedidoService(self.uow).avanzar_estado(
+        PedidoService(self.uow).avanzar_estado(
             pedido_id=pago.pedido_id,
             estado_hacia="CONFIRMADO",
             usuario_id=None,

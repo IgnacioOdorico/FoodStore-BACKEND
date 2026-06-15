@@ -119,7 +119,7 @@ async def confirm_pago(
 def redirect_post_pago(pedido_id: int, estado: str, request: Request):
     frontend = settings.VITE_FRONTEND_URL or "http://localhost:5174"
     qs = request.url.query
-    url = f"{frontend}/orders"
+    url = f"{frontend}/orders/{pedido_id}/{estado}"
     if qs:
         url += f"?{qs}"
     return RedirectResponse(url=url)
