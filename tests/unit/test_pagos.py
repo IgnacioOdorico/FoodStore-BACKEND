@@ -236,10 +236,10 @@ class TestWebhook:
         session.refresh(pedido)
         assert pedido.estado_codigo == "CONFIRMADO"
 
-    def test_webhook_rechazado_cancela_pedido(
+    def test_webhook_rechazado_no_cancela_pedido(
         self, client: TestClient, session: Session
     ):
-        """Webhook con pago rechazado debe cancelar el pedido."""
+        """Webhook con pago rechazado NO debe cancelar el pedido para permitir reintentos."""
         pedido_id, headers = _seed_y_crear_pedido(client, session)
 
         external_ref = "ext-ref-webhook-rech-123"
@@ -281,7 +281,7 @@ class TestWebhook:
 
         pedido = session.get(Pedido, pedido_id)
         session.refresh(pedido)
-        assert pedido.estado_codigo == "CANCELADO"
+        assert pedido.estado_codigo == "PENDIENTE"
 
     def test_confirm_pago_aprobado(
         self, client: TestClient, session: Session

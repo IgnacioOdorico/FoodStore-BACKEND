@@ -357,19 +357,15 @@ class PaymentService:
 
     def _sincronizar_pedido(self, pago: Pago, nuevo_estado: str) -> bool:
 
-        if nuevo_estado not in ("aprobado", "rechazado"):
+        if nuevo_estado not in ("aprobado",):
             return False
 
         pedido = self.uow.pedidos.get_by_id(pago.pedido_id)
         if not pedido or pedido.estado_codigo != "PENDIENTE":
             return False
 
-        estado_hacia = "CONFIRMADO" if nuevo_estado == "aprobado" else "CANCELADO"
-        motivo = (
-            "Pago aprobado por MercadoPago"
-            if nuevo_estado == "aprobado"
-            else "Pago rechazado por MercadoPago"
-        )
+        estado_hacia = "CONFIRMADO"
+        motivo = "Pago aprobado por MercadoPago"
 
         from app.modules.pedidos.service import PedidoService
 
