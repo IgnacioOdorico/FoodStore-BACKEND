@@ -87,7 +87,8 @@ class TestWebSocket:
 
         monkeypatch.setattr("app.core.uow.engine", engine_test)
 
-        with client.websocket_connect("/api/v1/pedidos/ws", cookies={"access_token": cookie_val}) as websocket:
+        client.cookies = {"access_token": cookie_val}
+        with client.websocket_connect("/api/v1/pedidos/ws") as websocket:
             websocket.send_text('{"action": "ping"}')
             assert True  # conexión abierta sin excepción
 
@@ -97,7 +98,8 @@ class TestWebSocket:
 
         monkeypatch.setattr("app.core.uow.engine", engine_test)
 
-        with client.websocket_connect("/api/v1/pedidos/ws", cookies={"access_token": cookie_val}) as websocket:
+        client.cookies = {"access_token": cookie_val}
+        with client.websocket_connect("/api/v1/pedidos/ws") as websocket:
             websocket.send_json({"action": "subscribe-order", "order_id": 999})
             data = websocket.receive_json()
             assert data["event"] == "SUBSCRIBED"
@@ -131,9 +133,8 @@ class TestWebSocket:
         cookie_admin = admin_auth_headers["Cookie"].split("=")[1]
 
         # 2. Abrir conexión WS y suscribirse al pedido
-        with client.websocket_connect(
-            "/api/v1/pedidos/ws", cookies={"access_token": cookie_admin}
-        ) as ws:
+        client.cookies = {"access_token": cookie_admin}
+        with client.websocket_connect("/api/v1/pedidos/ws") as ws:
             # Suscribirse a la room del pedido creado
             ws.send_json({"action": "subscribe-order", "order_id": pedido_id})
             sub_ack = ws.receive_json()

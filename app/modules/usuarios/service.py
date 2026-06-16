@@ -10,6 +10,7 @@ from app.core.uow import UnitOfWork
 from app.core.config import settings
 from app.modules.usuarios.model import Usuario, UsuarioRol, RefreshToken
 from app.modules.usuarios.schemas import UserCreate, Token, TokenConRefresh, UserPublic, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
+from sqlmodel import select
 
 
 class UsuarioService:
@@ -174,9 +175,9 @@ class UsuarioService:
             )
 
         token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
-        stored = self.uow.session.query(RefreshToken).filter(
+        stored = self.uow.session.exec(select(RefreshToken).where(
             RefreshToken.token_hash == token_hash
-        ).first()
+        )).first()
 
         if not stored:
             raise HTTPException(
@@ -233,9 +234,9 @@ class UsuarioService:
         if not refresh_token_str:
             return
         token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
-        stored = self.uow.session.query(RefreshToken).filter(
+        stored = self.uow.session.exec(select(RefreshToken).where(
             RefreshToken.token_hash == token_hash
-        ).first()
+        )).first()
         if stored and stored.revoked_at is None:
             stored.revoked_at = datetime.now(timezone.utc)
             self.uow.session.flush()
