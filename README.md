@@ -228,6 +228,6 @@ pytest tests/integration/
 
 ## Demo en Video
 
-[Ver Video de Demostración](https://www.youtube.com/watch?v=HCHS3oAsbC4)
+[Ver Video de Demostración]([https://www.youtube.com/watch?v=HCHS3oAsbC4](https://youtu.be/pKjKTs4ttKA))
 
 ---
