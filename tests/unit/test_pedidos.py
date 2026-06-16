@@ -188,7 +188,7 @@ class TestAvanzarEstado:
 
         # Avanzar a CONFIRMADO
         response = client.patch(
-            f"/api/v1/pedidos/{pedido_id}/avanzar",
+            f"/api/v1/pedidos/{pedido_id}/estado",
             json={"estado_hacia": "CONFIRMADO"},
             headers=admin_auth_headers,
         )
@@ -215,7 +215,7 @@ class TestAvanzarEstado:
 
         # PENDIENTE → ENTREGADO no es válido según FSM
         response = client.patch(
-            f"/api/v1/pedidos/{pedido_id}/avanzar",
+            f"/api/v1/pedidos/{pedido_id}/estado",
             json={"estado_hacia": "ENTREGADO"},
             headers=admin_auth_headers,
         )
@@ -240,7 +240,7 @@ class TestAvanzarEstado:
         pedido_id = res.json()["id"]
 
         response = client.patch(
-            f"/api/v1/pedidos/{pedido_id}/avanzar",
+            f"/api/v1/pedidos/{pedido_id}/estado",
             json={"estado_hacia": "CANCELADO", "motivo": None},
             headers=admin_auth_headers,
         )
@@ -265,7 +265,7 @@ class TestAvanzarEstado:
         pedido_id = res.json()["id"]
 
         response = client.patch(
-            f"/api/v1/pedidos/{pedido_id}/avanzar",
+            f"/api/v1/pedidos/{pedido_id}/estado",
             json={"estado_hacia": "CANCELADO", "motivo": "El cliente cambió de opinión"},
             headers=admin_auth_headers,
         )
@@ -296,7 +296,7 @@ class TestHistorial:
 
         # Avanzar estado para agregar entrada al historial
         client.patch(
-            f"/api/v1/pedidos/{pedido_id}/avanzar",
+            f"/api/v1/pedidos/{pedido_id}/estado",
             json={"estado_hacia": "CONFIRMADO"},
             headers=admin_auth_headers,
         )

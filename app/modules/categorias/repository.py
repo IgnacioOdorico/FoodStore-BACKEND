@@ -11,11 +11,19 @@ class CategoriaRepository(BaseRepository[Categoria]):
     def __init__(self, session: Session):
         super().__init__(Categoria, session)
 
-    def list_active(self, parent_id: Optional[int] = None) -> List[Categoria]:
+    def list_active(self, parent_id: Optional[int] = None, *, offset: int = 0, limit: int = 100) -> List[Categoria]:
         statement = select(Categoria).where(Categoria.deleted_at == None)  # noqa: E711
         if parent_id is not None:
             statement = statement.where(Categoria.parent_id == parent_id)
+        statement = statement.offset(offset).limit(limit)
         return list(self.session.exec(statement).all())
+
+    def count_active(self, parent_id: Optional[int] = None) -> int:
+        from sqlmodel import func
+        statement = select(func.count(Categoria.id)).where(Categoria.deleted_at == None)  # noqa: E711
+        if parent_id is not None:
+            statement = statement.where(Categoria.parent_id == parent_id)
+        return self.session.exec(statement).one()
 
     def get_by_nombre(self, nombre: str) -> Categoria | None:
         return self.session.exec(

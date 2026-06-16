@@ -59,11 +59,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # Paths que matchean el auth_limiter (más estricto).
     # Adaptados a los endpoints de FoodStore-BACKEND.
     AUTH_PATHS: tuple[str, ...] = (
-        "/usuarios/token",
-        "/usuarios/register",
-        "/usuarios/logout",
-        "/auth/token",
-        "/auth/register",
+        "/api/v1/auth/token",
+        "/api/v1/auth/register",
+        "/api/v1/auth/logout",
+        "/api/v1/auth/refresh",
     )
 
     # Paths EXCLUIDOS del rate limiting (health checks, docs, etc.).

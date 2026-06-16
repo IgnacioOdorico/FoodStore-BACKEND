@@ -13,6 +13,7 @@ class ProductoBase(BaseModel):
     unidad_venta_id: Optional[int] = None
 
 
+
 class IngredienteEnReceta(BaseModel):
     id:               int
     cantidad:         float = Field(gt=0)
@@ -33,6 +34,7 @@ class ProductoUpdate(BaseModel):
     stock_cantidad:      Optional[int] = Field(default=None, ge=0)
     disponible:          Optional[bool] = None
     unidad_venta_id:     Optional[int] = None
+
     categoria_ids:       Optional[List[int]] = None
     ingredientes_receta: Optional[List[IngredienteEnReceta]] = None
 
@@ -58,9 +60,11 @@ class CategoriaConExtra(CategoriaRead):
 
 
 class IngredienteConExtra(IngredienteRead):
-    cantidad:         float = 0.0
-    unidad_medida_id: Optional[int] = None
-    es_removible:     bool = False
+    cantidad:                float = 0.0
+    unidad_medida_id:        Optional[int] = None
+    unidad_medida_simbolo:   str = ""
+    unidad_medida_nombre:    str = ""
+    es_removible:            bool = False
 
 
 class ProductoReadWithDetails(ProductoRead):

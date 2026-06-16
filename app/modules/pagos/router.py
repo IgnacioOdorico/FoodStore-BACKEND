@@ -97,9 +97,21 @@ async def webhook(
             return {"status": "error", "reason": "invalid_signature"}
 
         with uow:
-            return await PaymentService(uow).procesar_webhook(
+            result = await PaymentService(uow).procesar_webhook(
                 data, query_params=query_params
             )
+            
+        if result.get("sincronizado"):
+            from app.core.uow import UnitOfWork as WSUnitOfWork
+            from app.modules.pedidos.service import PedidoService
+            from app.core.websocket import manager
+            with WSUnitOfWork() as ws_uow:
+                service = PedidoService(ws_uow, ws_manager=manager)
+                pedido_public = service._to_public(result["pedido_id"])
+            ws_estado = "CONFIRMADO" if result.get("estado") == "aprobado" else "CANCELADO"
+            await service.emit_ws_event(pedido_public, ws_estado)
+            
+        return result
     except Exception as e:
         logger.exception("Error en webhook MP")
         return {"status": "error", "reason": str(e)}
@@ -111,15 +123,39 @@ async def confirm_pago(
     current_user: Annotated[UserPublic, Depends(get_current_active_user)],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
 ):
+    sincronizado = False
     with uow:
-        return await PaymentService(uow).confirmar_pago(data.pedido_id, data.payment_id)
+        # Verificamos estado antes y después
+        from app.modules.pedidos.service import PedidoService
+        pedido_antes = uow.pedidos.get_by_id(data.pedido_id)
+        estado_antes = pedido_antes.estado_codigo if pedido_antes else None
+        
+        result = await PaymentService(uow).confirmar_pago(data.pedido_id, data.payment_id)
+        
+        pedido_despues = uow.pedidos.get_by_id(data.pedido_id)
+        estado_despues = pedido_despues.estado_codigo if pedido_despues else None
+        
+        if estado_antes == "PENDIENTE" and estado_despues in ("CONFIRMADO", "CANCELADO"):
+            sincronizado = True
+
+    if sincronizado:
+        from app.core.uow import UnitOfWork as WSUnitOfWork
+        from app.modules.pedidos.service import PedidoService
+        from app.core.websocket import manager
+        with WSUnitOfWork() as ws_uow:
+            service = PedidoService(ws_uow, ws_manager=manager)
+            pedido_public = service._to_public(data.pedido_id)
+        ws_estado = "CONFIRMADO" if estado_despues == "CONFIRMADO" else "CANCELADO"
+        await service.emit_ws_event(pedido_public, ws_estado)
+
+    return result
 
 
 @router.get("/redirect/{pedido_id}/{estado}")
 def redirect_post_pago(pedido_id: int, estado: str, request: Request):
     frontend = settings.VITE_FRONTEND_URL or "http://localhost:5174"
     qs = request.url.query
-    url = f"{frontend}/orders"
+    url = f"{frontend}/orders/{pedido_id}/{estado}"
     if qs:
         url += f"?{qs}"
     return RedirectResponse(url=url)

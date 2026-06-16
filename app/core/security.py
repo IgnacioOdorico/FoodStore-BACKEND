@@ -128,3 +128,46 @@ def decode_access_token(token: str) -> dict | None:
     except JWTError:
         # Cualquier problema (firma, expiración, formato, etc.)
         return None
+
+
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    """
+    Genera un JWT firmado para refresh (type='refresh').
+
+    Parámetros:
+    - data: payload base (ej: {"sub": user.email})
+    - expires_delta: override opcional del tiempo de expiración
+
+    Retorna:
+    - Token JWT firmado (string)
+    """
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    )
+    to_encode.update({"type": "refresh", "exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_refresh_token(token: str) -> dict | None:
+    """
+    Decodifica y valida un refresh token.
+
+    Validaciones:
+    - Firma válida
+    - Expiración (exp)
+    - type == "refresh"
+
+    Retorna:
+    - dict → payload válido
+    - None → token inválido
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        if payload.get("type") != "refresh":
+            return None
+        return payload
+    except JWTError:
+        return None

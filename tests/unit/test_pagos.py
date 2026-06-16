@@ -4,7 +4,7 @@ tests/unit/test_pagos.py
 Tests de la integración de pagos con MercadoPago.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import ANY, patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
@@ -163,20 +163,22 @@ class TestWebhook:
 
     def test_webhook_sin_payment_id_retorna_ignored(self, client: TestClient):
         """Webhook sin payment_id es ignorado silenciosamente (siempre 200)."""
-        response = client.post(
-            "/api/v1/pagos/webhook",
-            json={"type": "payment"},
-        )
+        with patch("app.modules.pagos.router._verify_hmac", return_value=True):
+            response = client.post(
+                "/api/v1/pagos/webhook",
+                json={"type": "payment"},
+            )
         assert response.status_code == 200
         data = response.json()
         assert data.get("status") == "ignored"
 
     def test_webhook_topic_desconocido_retorna_ignored(self, client: TestClient):
         """Webhook con topic desconocido es ignorado."""
-        response = client.post(
-            "/api/v1/pagos/webhook",
-            json={"type": "subscription", "data": {"id": "123"}},
-        )
+        with patch("app.modules.pagos.router._verify_hmac", return_value=True):
+            response = client.post(
+                "/api/v1/pagos/webhook",
+                json={"type": "subscription", "data": {"id": "123"}},
+            )
         assert response.status_code == 200
         data = response.json()
         assert data.get("status") == "ignored"
@@ -208,7 +210,6 @@ class TestWebhook:
             "mp_payment_id": 999888777,
             "mp_status": "approved",
             "mp_status_detail": "accredited",
-            "mp_merchant_order_id": None,
             "payment_method_id": "visa",
             "external_reference": external_ref,
         }
@@ -216,6 +217,9 @@ class TestWebhook:
         with patch(
             "app.modules.pagos.service.PaymentService._consultar_pago_mp",
             return_value=mp_info_aprobado,
+        ), patch(
+            "app.modules.pagos.router._verify_hmac",
+            return_value=True,
         ):
             response = client.post(
                 "/api/v1/pagos/webhook",
@@ -231,6 +235,121 @@ class TestWebhook:
         pedido = session.get(Pedido, pedido_id)
         session.refresh(pedido)
         assert pedido.estado_codigo == "CONFIRMADO"
+
+    def test_webhook_rechazado_no_cancela_pedido(
+        self, client: TestClient, session: Session
+    ):
+        """Webhook con pago rechazado NO debe cancelar el pedido para permitir reintentos."""
+        pedido_id, headers = _seed_y_crear_pedido(client, session)
+
+        external_ref = "ext-ref-webhook-rech-123"
+        pago = Pago(
+            pedido_id=pedido_id,
+            transaction_amount=550.0,
+            estado="pendiente",
+            mp_status="pending",
+            external_reference=external_ref,
+            idempotency_key="idem-webhook-rech-key-456",
+        )
+        session.add(pago)
+        session.commit()
+
+        mp_info_rechazado = {
+            "mp_payment_id": 999888777,
+            "mp_status": "rejected",
+            "mp_status_detail": "cc_rejected_bad_filled_card_number",
+            "payment_method_id": "visa",
+            "external_reference": external_ref,
+        }
+
+        with patch(
+            "app.modules.pagos.service.PaymentService._consultar_pago_mp",
+            return_value=mp_info_rechazado,
+        ), patch(
+            "app.modules.pagos.router._verify_hmac",
+            return_value=True,
+        ):
+            response = client.post(
+                "/api/v1/pagos/webhook",
+                json={"type": "payment", "data": {"id": "999888777"}},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("status") == "ok"
+        assert data.get("estado") == "rechazado"
+
+        pedido = session.get(Pedido, pedido_id)
+        session.refresh(pedido)
+        assert pedido.estado_codigo == "PENDIENTE"
+
+    def test_confirm_pago_aprobado(
+        self, client: TestClient, session: Session
+    ):
+        """Confirmar pago aprobado avanza el pedido a CONFIRMADO."""
+        pedido_id, headers = _seed_y_crear_pedido(client, session)
+
+        external_ref = "ext-ref-confirm-111"
+        pago = Pago(
+            pedido_id=pedido_id,
+            transaction_amount=550.0,
+            estado="pendiente",
+            mp_status="pending",
+            external_reference=external_ref,
+            idempotency_key="idem-confirm-key-222",
+        )
+        session.add(pago)
+        session.commit()
+
+        mp_info_aprobado = {
+            "mp_payment_id": 999888777,
+            "mp_status": "approved",
+            "mp_status_detail": "accredited",
+            "payment_method_id": "visa",
+            "external_reference": external_ref,
+        }
+
+        with patch(
+            "app.modules.pagos.service.PaymentService._consultar_pago_mp",
+            return_value=mp_info_aprobado,
+        ):
+            response = client.post(
+                "/api/v1/pagos/confirm",
+                json={"pedido_id": pedido_id, "payment_id": 999888777},
+                headers=headers,
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("estado") == "aprobado"
+
+        pedido = session.get(Pedido, pedido_id)
+        session.refresh(pedido)
+        assert pedido.estado_codigo == "CONFIRMADO"
+
+    def test_webhook_merchant_order_es_ignorado(self, client: TestClient):
+        """Webhook con topic merchant_order es ignorado (se procesa vía payment)."""
+        with patch("app.modules.pagos.router._verify_hmac", return_value=True):
+            response = client.post(
+                "/api/v1/pagos/webhook",
+                json={"type": "merchant_order", "data": {"id": "123"}},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("status") == "ignored"
+        assert "merchant_order" in data.get("reason", "")
+
+    def test_webhook_hmac_invalido_retorna_error(self, client: TestClient):
+        """Webhook sin HMAC válido retorna error (no se procesa)."""
+        with patch("app.modules.pagos.router.settings.MP_WEBHOOK_SECRET", "test-secret"):
+            response = client.post(
+                "/api/v1/pagos/webhook",
+                json={"type": "payment", "data": {"id": "123"}},
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("status") == "error"
+        assert "invalid_signature" in data.get("reason", "")
 
 
 class TestGetPago:

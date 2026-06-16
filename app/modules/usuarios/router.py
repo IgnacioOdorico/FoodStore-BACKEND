@@ -1,15 +1,16 @@
+import json
 import logging
 import traceback
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, status, Response, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from app.core.config import settings
 from app.modules.usuarios.schemas import (
-    UserCreate, UserPublic, Token, UserUpdate,
+    UserCreate, UserPublic, Token, TokenConRefresh, UserUpdate,
     AdminUserCreate, AdminUserUpdate, PasswordChange,
 )
 from app.modules.usuarios.service import UsuarioService
@@ -36,12 +37,12 @@ def register(
 
 
 @router.post("/token")
-def login(
+async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     uow: Annotated[UnitOfWork, Depends(get_uow)],
     response: Response,
 ):
-    """Login: emite access_token como cookie httpOnly."""
+    """Login: emite access_token + refresh_token (cookie + body)."""
     try:
         logger.info(f"[LOGIN] Attempting login for: {form_data.username}")
         with uow:
@@ -53,28 +54,88 @@ def login(
                 httponly=True,
                 max_age=_ACCESS_MAX_AGE,
                 samesite="lax",
-                secure=False,
+                secure=not settings.DEBUG,
+            )
+            response.set_cookie(
+                key="refresh_token",
+                value=token.refresh_token,
+                httponly=True,
+                max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+                path="/api/v1/auth",
+                samesite="lax",
+                secure=not settings.DEBUG,
             )
             logger.info(f"[LOGIN] OK for: {form_data.username}")
-            return {"mensaje": "Login exitoso", "user_email": form_data.username}
+            return token
     except Exception as e:
         logger.error(f"[LOGIN ERROR] {e}\n{traceback.format_exc()}")
         raise
 
 
 @router.post("/logout")
-def logout(response: Response):
-    """Cierra la sesión eliminando la cookie de acceso (y revocando el refresh token en BD)."""
+async def logout(
+    response: Response,
+    uow: Annotated[UnitOfWork, Depends(get_uow)],
+    request: Request,
+):
+    """Cierra la sesión revocando el refresh token y eliminando cookies."""
+    refresh_token_str = request.cookies.get("refresh_token")
+    if refresh_token_str:
+        with uow:
+            service = UsuarioService(uow)
+            service.revoke_refresh(refresh_token_str)
     response.delete_cookie(key="access_token", httponly=True, samesite="lax")
+    response.delete_cookie(key="refresh_token", httponly=True, samesite="lax", path="/api/v1/auth")
     return {"mensaje": "Sesión cerrada"}
 
 @router.post("/refresh")
-def refresh_token(
+async def refresh_token(
     response: Response,
     uow: Annotated[UnitOfWork, Depends(get_uow)],
+    request: Request,
 ):
     """Emite un nuevo access_token y rota el refresh_token."""
-    pass
+    refresh_token_str = None
+    try:
+        raw = await request.body()
+        if raw:
+            data = json.loads(raw)
+            refresh_token_str = data.get("refresh_token")
+    except Exception:
+        pass
+
+    if not refresh_token_str:
+        refresh_token_str = request.cookies.get("refresh_token")
+
+    if not refresh_token_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token requerido",
+        )
+
+    with uow:
+        service = UsuarioService(uow)
+        token = service.refresh_session(refresh_token_str)
+
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        max_age=_ACCESS_MAX_AGE,
+        samesite="lax",
+        secure=not settings.DEBUG,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=token.refresh_token,
+        httponly=True,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        path="/api/v1/auth",
+        samesite="lax",
+        secure=not settings.DEBUG,
+    )
+
+    return token
 
 
 # Perfil del usuario autenticado
@@ -146,7 +207,7 @@ def update_user(
 ):
     with uow:
         service = UsuarioService(uow)
-        return service.update_user(user_id, data)
+        return service.update_user(user_id, data, current_admin_id=_admin.id)
 
 
 @admin_router.post("/{user_id}/reactivar", response_model=UserPublic)
@@ -168,4 +229,4 @@ def delete_user(
 ):
     with uow:
         service = UsuarioService(uow)
-        return service.delete_user(user_id)
+        return service.delete_user(user_id, current_admin_id=_admin.id)

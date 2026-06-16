@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import ConfigDict
 from sqlmodel import SQLModel, Field
@@ -29,3 +29,10 @@ class CategoriaPublic(SQLModel):
     updated_at:  datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedCategorias(SQLModel):
+    items: List[CategoriaPublic]
+    total: int
+    skip: int
+    limit: int

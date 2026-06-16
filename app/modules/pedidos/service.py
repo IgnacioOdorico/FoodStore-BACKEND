@@ -47,10 +47,11 @@ ESTADOS_CANCELABLES_POR_CLIENTE = {"PENDIENTE", "CONFIRMADO"}
 
 
 class PedidoService:
-    def __init__(self, uow: UnitOfWork):
+    def __init__(self, uow: UnitOfWork, ws_manager=None):
         self.uow = uow
+        self._ws_manager = ws_manager
 
-    async def crear_pedido(self, usuario_id: int, data: PedidoCreate) -> PedidoPublic:
+    def crear_pedido(self, usuario_id: int, data: PedidoCreate) -> PedidoPublic:
 
         fp = self.uow.formas_pago.get_by_codigo(data.forma_pago_codigo)
         if not fp:
@@ -97,7 +98,6 @@ class PedidoService:
                     detail=f"Stock insuficiente para el producto '{producto.nombre}'",
                 )
 
-            # Descontar stock
             producto.stock_cantidad -= it.cantidad
             if producto.stock_cantidad == 0:
                 producto.disponible = False
@@ -123,7 +123,6 @@ class PedidoService:
                 detail="El total no puede ser negativo",
             )
 
-        # 3. INSERT Pedido (estado inicial PENDIENTE)
         pedido = Pedido(
             usuario_id=usuario_id,
             direccion_id=data.direccion_id,
@@ -136,14 +135,11 @@ class PedidoService:
             notas=data.notas,
         )
         self.uow.pedidos.add(pedido)
-        self.uow.session.flush()
 
-        # 4. INSERT detalles
         for d in items:
             d.pedido_id = pedido.id
-            self.uow.session.add(d)
+            self.uow.detalles_pedidos.add(d)
 
-        # 5. INSERT en audit trail de estados
         self.uow.historial_pedidos.add(
             HistorialEstadoPedido(
                 pedido_id=pedido.id,
@@ -156,20 +152,9 @@ class PedidoService:
 
         result = self._to_public(pedido.id)
 
-        from app.core.websocket import manager
-
-        await manager.broadcast_to_order(
-            pedido.id, "PEDIDO_NUEVO", _pedido_to_ws_dict(result)
-        )
-        roles_a_notificar = ROLES_POR_TRANSICION.get("PENDIENTE", [])
-        if roles_a_notificar:
-            await manager.broadcast_to_roles(
-                roles_a_notificar, "PEDIDO_NUEVO", _pedido_to_ws_dict(result)
-            )
-
         return result
 
-    async def avanzar_estado(
+    def avanzar_estado(
         self,
         pedido_id: int,
         estado_hacia: str,
@@ -180,6 +165,10 @@ class PedidoService:
         pedido = self._get_pedido_or_404(pedido_id)
 
         estado_desde = pedido.estado_codigo
+        
+        if estado_desde == estado_hacia:
+            return self._to_public(pedido.id)
+            
         permitidos = FSM.get(estado_desde, set())
 
         if estado_hacia not in permitidos:
@@ -198,7 +187,6 @@ class PedidoService:
         pedido.updated_at = datetime.now(timezone.utc)
         self.uow.pedidos.update(pedido)
 
-        # Restaurar stock si se cancela
         if estado_hacia == "CANCELADO":
             for detalle in pedido.detalles:
                 producto = self.uow.productos.get_by_id(detalle.producto_id)
@@ -219,19 +207,9 @@ class PedidoService:
         )
         result = self._to_public(pedido.id)
 
-        event_type = EVENTOS_WS.get(estado_hacia)
-        if event_type:
-            from app.core.websocket import manager
-
-            data_ws = _pedido_to_ws_dict(result)
-            await manager.broadcast_to_order(pedido_id, event_type, data_ws)
-            roles_a_notificar = ROLES_POR_TRANSICION.get(estado_hacia, [])
-            if roles_a_notificar:
-                await manager.broadcast_to_roles(roles_a_notificar, event_type, data_ws)
-
         return result
 
-    async def cancelar_cliente(
+    def cancelar_cliente(
         self,
         pedido_id: int,
         usuario_id: int,
@@ -244,6 +222,9 @@ class PedidoService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tenés permiso para cancelar este pedido",
             )
+            
+        if pedido.estado_codigo == "CANCELADO":
+            return self._to_public(pedido.id)
 
         if pedido.estado_codigo not in ESTADOS_CANCELABLES_POR_CLIENTE:
             raise HTTPException(
@@ -251,7 +232,7 @@ class PedidoService:
                 detail=(f"estado actual: {pedido.estado_codigo}"),
             )
 
-        return await self.avanzar_estado(pedido_id, "CANCELADO", usuario_id, motivo)
+        return self.avanzar_estado(pedido_id, "CANCELADO", usuario_id, motivo)
 
     def get_pedido_para_usuario(
         self, pedido_id: int, usuario_id: int, roles: List[str]
@@ -331,6 +312,20 @@ class PedidoService:
             pago=pago,
         )
 
+    async def emit_ws_event(self, result: PedidoPublic, estado_hacia: str) -> None:
+        """Emite el evento WebSocket correspondiente al cambio de estado."""
+
+        if not self._ws_manager:
+            return
+        event_type = EVENTOS_WS.get(estado_hacia)
+        if not event_type:
+            return
+        data_ws = _pedido_to_ws_dict(result)
+        await self._ws_manager.broadcast_to_order(result.id, event_type, data_ws)
+        roles = ROLES_POR_TRANSICION.get(estado_hacia, [])
+        if roles:
+            await self._ws_manager.broadcast_to_roles(roles, event_type, data_ws)
+
 
 def _pedido_to_ws_dict(pedido: PedidoPublic) -> dict[str, Any]:
 
@@ -339,7 +334,7 @@ def _pedido_to_ws_dict(pedido: PedidoPublic) -> dict[str, Any]:
         "usuario_id": pedido.usuario_id,
         "estado_codigo": pedido.estado_codigo,
         "forma_pago_codigo": pedido.forma_pago_codigo,
-        "total": pedido.total,
+        "total": float(pedido.total),
         "notas": pedido.notas,
         "created_at": pedido.created_at.isoformat(),
         "updated_at": pedido.updated_at.isoformat(),

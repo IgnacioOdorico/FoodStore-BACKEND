@@ -20,7 +20,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.database import create_all_tables
 from app.core.config import settings
 
 # Logger (portado de api_middlewares_testing)
@@ -44,6 +43,7 @@ from app.modules.ingrediente.router import router as ingrediente_router
 from app.modules.pedidos.router import router as pedidos_router
 from app.modules.pagos.router import router as pagos_router
 from app.modules.uploads.router import router as uploads_router
+from app.modules.estadisticas.router import router as estadisticas_router
 
 
 # ---------------------------------------------------------------------------
@@ -78,14 +78,6 @@ async def lifespan(app: FastAPI):
         "app.startup — FoodStore API v%s [env: production]",
         "2.0.0",
     )
-
-    try:
-        create_all_tables()
-        logger.info("db.tables_created")
-    except Exception as e:
-        # En tests, la BD de producción no está disponible.
-        # conftest.py crea las tablas con SQLite en memoria.
-        logger.warning("db.create_tables.skipped: %s", e)
 
     yield  # ← La app queda escuchando requests acá.
 
@@ -162,6 +154,7 @@ app.include_router(ingrediente_router)
 app.include_router(pedidos_router)
 app.include_router(pagos_router)
 app.include_router(uploads_router)
+app.include_router(estadisticas_router)
 
 
 # ---------------------------------------------------------------------------

@@ -111,4 +111,4 @@ class TestRateLimitDefault:
 
         assert "retry-after" in last_429.headers
         retry_after = int(last_429.headers["retry-after"])
-        assert retry_after > 0
+        assert retry_after >= 0

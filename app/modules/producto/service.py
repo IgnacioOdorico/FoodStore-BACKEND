@@ -7,6 +7,7 @@ from sqlmodel import select, func
 from app.core.uow import UnitOfWork
 from app.modules.producto.models import Producto
 from app.modules.producto.associations import ProductoCategoria, ProductoIngrediente
+from app.modules.catalogos.models import UnidadMedida
 from app.modules.producto.schemas import (
     ProductoCreate,
     ProductoUpdate,
@@ -174,5 +175,10 @@ class ProductoService:
                 ing_dto.cantidad = link.cantidad
                 ing_dto.unidad_medida_id = link.unidad_medida_id
                 ing_dto.es_removible = link.es_removible
+                if link.unidad_medida_id:
+                    um = self.uow.session.get(UnidadMedida, link.unidad_medida_id)
+                    if um:
+                        ing_dto.unidad_medida_simbolo = um.simbolo
+                        ing_dto.unidad_medida_nombre = um.nombre
 
         return dto

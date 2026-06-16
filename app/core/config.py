@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Base de datos
     postgres_user: str = "postgres"
     postgres_password: str = "password"
-    postgres_db: str = "parcial2"
+    postgres_db: str = "foodstore"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
 
@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     ALGORITHM:  str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120  # 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ─── MercadoPago ─────────────────────────────────────────────────────────
     MP_ACCESS_TOKEN: Optional[str] = None
@@ -72,6 +73,10 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
+
+    # ─── Debug / Entorno ─────────────────────────────────────────────────────
+    # True: desarrollo (secure=False en cookies, etc.). False: producción.
+    DEBUG: bool = True
 
     # ─── Logging ─────────────────────────────────────────────────────────────
     # Nivel de log. Literal evita typos (typo en el .env → falla validación).
