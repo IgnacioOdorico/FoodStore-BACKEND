@@ -1,13 +1,15 @@
-from datetime import datetime, timezone
+import hashlib
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from fastapi import HTTPException, status
 
 from app.core.security import (
-    hash_password, verify_password, create_access_token,
+    hash_password, verify_password, create_access_token, create_refresh_token, decode_refresh_token,
 )
 from app.core.uow import UnitOfWork
-from app.modules.usuarios.model import Usuario, UsuarioRol
-from app.modules.usuarios.schemas import UserCreate, Token, UserPublic, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
+from app.core.config import settings
+from app.modules.usuarios.model import Usuario, UsuarioRol, RefreshToken
+from app.modules.usuarios.schemas import UserCreate, Token, TokenConRefresh, UserPublic, UserUpdate, AdminUserCreate, AdminUserUpdate, PasswordChange
 
 
 class UsuarioService:
@@ -121,8 +123,8 @@ class UsuarioService:
 
         return self._to_public(user_db)
 
-    def authenticate(self, email: str, password: str) -> Token:
-        """Verifica credenciales y genera access token. Retorna Token."""
+    def authenticate(self, email: str, password: str) -> TokenConRefresh:
+        """Verifica credenciales y genera access + refresh tokens."""
         user = self.uow.usuarios.get_by_email(email)
 
         if not user or not verify_password(password, user.password_hash):
@@ -144,11 +146,99 @@ class UsuarioService:
             data={"sub": user.email, "roles": roles, "name": f"{user.nombre} {user.apellido}"}
         )
 
-        return Token(
+        refresh_jwt = create_refresh_token(data={"sub": user.email, "usuario_id": user.id})
+
+        token_hash = hashlib.sha256(refresh_jwt.encode()).hexdigest()
+        refresh_record = RefreshToken(
+            usuario_id=user.id,
+            token_hash=token_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+        self.uow.session.add(refresh_record)
+        self.uow.session.flush()
+
+        return TokenConRefresh(
             access_token=access_token,
             token_type="bearer",
             expires_in=30 * 60,
+            refresh_token=refresh_jwt,
         )
+
+    def refresh_session(self, refresh_token_str: str) -> TokenConRefresh:
+        """Rota un refresh token: revoca el viejo, emite nuevos pares."""
+        payload = decode_refresh_token(refresh_token_str)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de refresco inválido o expirado",
+            )
+
+        token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
+        stored = self.uow.session.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash
+        ).first()
+
+        if not stored:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de refresco no encontrado",
+            )
+
+        if stored.revoked_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de refresco ya fue revocado",
+            )
+
+        if stored.expires_at < datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de refresco expirado",
+            )
+
+        stored.revoked_at = datetime.now(timezone.utc)
+
+        user = self.uow.usuarios.get_by_id(stored.usuario_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuario no encontrado",
+            )
+
+        roles = self.uow.usuarios.get_roles_codes(user.id)
+
+        new_access = create_access_token(
+            data={"sub": user.email, "roles": roles, "name": f"{user.nombre} {user.apellido}"}
+        )
+        new_refresh = create_refresh_token(data={"sub": user.email, "usuario_id": user.id})
+
+        new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
+        new_record = RefreshToken(
+            usuario_id=user.id,
+            token_hash=new_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+        self.uow.session.add(new_record)
+        self.uow.session.flush()
+
+        return TokenConRefresh(
+            access_token=new_access,
+            token_type="bearer",
+            expires_in=30 * 60,
+            refresh_token=new_refresh,
+        )
+
+    def revoke_refresh(self, refresh_token_str: str) -> None:
+        """Revoca un refresh token en BD."""
+        if not refresh_token_str:
+            return
+        token_hash = hashlib.sha256(refresh_token_str.encode()).hexdigest()
+        stored = self.uow.session.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash
+        ).first()
+        if stored and stored.revoked_at is None:
+            stored.revoked_at = datetime.now(timezone.utc)
+            self.uow.session.flush()
 
     def logout_user(self) -> None:
         """No-op: con solo access token en cookie, el logout se maneja borrando la cookie."""
@@ -158,24 +248,35 @@ class UsuarioService:
         usuarios = self.uow.usuarios.get_all(rol=rol, skip=skip, limit=limit)
         return [self._to_public(u) for u in usuarios]
 
-    def delete_user(self, user_id: int) -> UserPublic:
+    def delete_user(self, user_id: int, current_admin_id: int) -> UserPublic:
         user = self.uow.usuarios.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
             )
+        if user.id == current_admin_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No puedes eliminarte a ti mismo",
+            )
         user.deleted_at = datetime.now(timezone.utc)
         updated = self.uow.usuarios.update(user)
         return self._to_public(updated)
 
-    def update_user(self, user_id: int, data: AdminUserUpdate) -> UserPublic:
+    def update_user(self, user_id: int, data: AdminUserUpdate, current_admin_id: int) -> UserPublic:
         """Actualiza datos de cualquier usuario (admin). Permite cambiar email y roles."""
         user = self.uow.usuarios.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Usuario no encontrado",
+            )
+
+        if user.id == current_admin_id and data.roles is not None and "ADMIN" not in data.roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No puedes quitarte tu propio rol de administrador",
             )
 
         if data.nombre is not None:

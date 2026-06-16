@@ -60,9 +60,11 @@ class CategoriaConExtra(CategoriaRead):
 
 
 class IngredienteConExtra(IngredienteRead):
-    cantidad:         float = 0.0
-    unidad_medida_id: Optional[int] = None
-    es_removible:     bool = False
+    cantidad:                float = 0.0
+    unidad_medida_id:        Optional[int] = None
+    unidad_medida_simbolo:   str = ""
+    unidad_medida_nombre:    str = ""
+    es_removible:            bool = False
 
 
 class ProductoReadWithDetails(ProductoRead):

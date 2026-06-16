@@ -108,7 +108,8 @@ async def webhook(
             with WSUnitOfWork() as ws_uow:
                 service = PedidoService(ws_uow, ws_manager=manager)
                 pedido_public = service._to_public(result["pedido_id"])
-            await service.emit_ws_event(pedido_public, "CONFIRMADO")
+            ws_estado = "CONFIRMADO" if result.get("estado") == "aprobado" else "CANCELADO"
+            await service.emit_ws_event(pedido_public, ws_estado)
             
         return result
     except Exception as e:
@@ -134,7 +135,7 @@ async def confirm_pago(
         pedido_despues = uow.pedidos.get_by_id(data.pedido_id)
         estado_despues = pedido_despues.estado_codigo if pedido_despues else None
         
-        if estado_antes == "PENDIENTE" and estado_despues == "CONFIRMADO":
+        if estado_antes == "PENDIENTE" and estado_despues in ("CONFIRMADO", "CANCELADO"):
             sincronizado = True
 
     if sincronizado:
@@ -144,7 +145,8 @@ async def confirm_pago(
         with WSUnitOfWork() as ws_uow:
             service = PedidoService(ws_uow, ws_manager=manager)
             pedido_public = service._to_public(data.pedido_id)
-        await service.emit_ws_event(pedido_public, "CONFIRMADO")
+        ws_estado = "CONFIRMADO" if estado_despues == "CONFIRMADO" else "CANCELADO"
+        await service.emit_ws_event(pedido_public, ws_estado)
 
     return result
 

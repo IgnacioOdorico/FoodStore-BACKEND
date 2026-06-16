@@ -18,7 +18,7 @@ Uso en Service:
 from sqlmodel import Session
 
 from app.core.database import engine
-from app.modules.usuarios.repository import UsuarioRepository, RolRepository, UsuarioRolRepository
+from app.modules.usuarios.repository import UsuarioRepository, RolRepository, UsuarioRolRepository, RefreshTokenRepository
 from app.modules.direcciones.repository import DireccionRepository
 from app.modules.catalogos.repository import (UnidadMedidaRepository, EstadoPedidoRepository, FormaPagoRepository,)
 from app.modules.categorias.repository import CategoriaRepository
@@ -48,6 +48,7 @@ class UnitOfWork:
         self.usuarios        = UsuarioRepository(self.session)
         self.roles           = RolRepository(self.session)
         self.usuarios_roles  = UsuarioRolRepository(self.session)
+        self.refresh_tokens  = RefreshTokenRepository(self.session)
         self.direcciones     = DireccionRepository(self.session)
 
         self.unidades_medida = UnidadMedidaRepository(self.session)

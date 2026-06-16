@@ -175,17 +175,17 @@ def run() -> None:
             {"nombre": "gramo", "simbolo": "g", "tipo": "masa"},
             {"nombre": "litro", "simbolo": "L", "tipo": "volumen"},
             {"nombre": "mililitro", "simbolo": "mL", "tipo": "volumen"},
-            {"nombre": "pieza", "simbolo": "u", "tipo": "unidad"},
-            {"nombre": "docena", "simbolo": "doc", "tipo": "unidad"},
+            {"nombre": "unidad", "simbolo": "ud", "tipo": "unidad"},
+            {"nombre": "porciones", "simbolo": "porc", "tipo": "unidad"},
         ):
             unidades_map[u["simbolo"]] = _upsert(session, UnidadMedida, "simbolo", u["simbolo"], u)
         print("  [OK] Unidades de medida")
 
         # ─── 5. USUARIOS ─────────────────────────────────────────────────
         usuarios_data = [
-            {"nombre": "Nacho", "apellido": "Admin", "email": "admin@nachopizza.com", "password": "Admin1234!", "rol": "ADMIN"},
-            {"nombre": "Gabi", "apellido": "Stock", "email": "stock@nachopizza.com", "password": "Stock1234!", "rol": "STOCK"},
-            {"nombre": "Fede", "apellido": "Pedidos", "email": "pedidos@nachopizza.com", "password": "Pedidos1234!", "rol": "PEDIDOS"},
+            {"nombre": "Nacho", "apellido": "Admin", "email": "admin@foodstore.com", "password": "Admin1234!", "rol": "ADMIN"},
+            {"nombre": "Gabi", "apellido": "Stock", "email": "stock@foodstore.com", "password": "Stock1234!", "rol": "STOCK"},
+            {"nombre": "Fede", "apellido": "Pedidos", "email": "pedidos@foodstore.com", "password": "Pedidos1234!", "rol": "PEDIDOS"},
             {"nombre": "Juan", "apellido": "Cliente", "email": "juan@ejemplo.com", "password": "Juan1234!", "rol": "CLIENT"},
             {"nombre": "María", "apellido": "García", "email": "maria@ejemplo.com", "password": "Maria1234!", "rol": "CLIENT"},
             {"nombre": "Carlos", "apellido": "López", "email": "carlos@ejemplo.com", "password": "Carlos1234!", "rol": "CLIENT"},
@@ -330,14 +330,14 @@ def run() -> None:
                 "descripcion": "Pizza grande a la piedra con muzarella fresca y salsa de tomate.",
                 "precio": 8500.0, "stock": 25,
                 "categoria": "Pizzas", "img": img_url("pizza", "Muzzarella"),
-                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "u")],
+                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "ud")],
             },
             {
                 "nombre": "Pizza Napolitana",
                 "descripcion": "Pizza grande con muzarella, jamón cocido y rodajas de tomate fresco.",
                 "precio": 9500.0, "stock": 20,
                 "categoria": "Pizzas", "img": img_url("pizza", "Napolitana"),
-                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "u"), ("Jamón cocido", 100.0, "g")],
+                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "ud"), ("Jamón cocido", 100.0, "g")],
             },
             {
                 "nombre": "Pizza Fugazzeta",
@@ -351,7 +351,7 @@ def run() -> None:
                 "descripcion": "Pizza grande con muzarella, jamón, morrones asados y aceitunas.",
                 "precio": 10500.0, "stock": 18,
                 "categoria": "Pizzas", "img": img_url("pizza", "Especial"),
-                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "u"), ("Jamón cocido", 100.0, "g"), ("Morrón", 80.0, "g")],
+                "receta": [("Harina 0000", 250.0, "g"), ("Muzzarella", 200.0, "g"), ("Tomate perita", 2.0, "ud"), ("Jamón cocido", 100.0, "g"), ("Morrón", 80.0, "g")],
             },
             # ── HAMBURGUESAS ──
             {
@@ -359,65 +359,65 @@ def run() -> None:
                 "descripcion": "Hamburguesa con medallón de carne, lechuga, tomate y mayonesa.",
                 "precio": 6200.0, "stock": 30,
                 "categoria": "Hamburguesas", "img": img_url("burger", "Clásica"),
-                "receta": [("Medallón de carne", 1.0, "u"), ("Pan de hamburguesa", 1.0, "u"), ("Tomate perita", 1.0, "u"), ("Lechuga", 50.0, "g")],
+                "receta": [("Medallón de carne", 1.0, "ud"), ("Pan de hamburguesa", 1.0, "ud"), ("Tomate perita", 1.0, "ud"), ("Lechuga", 50.0, "g")],
             },
             {
                 "nombre": "Hamburguesa Completa",
                 "descripcion": "Doble medallón, cheddar, lechuga, tomate y huevo.",
                 "precio": 7800.0, "stock": 28,
                 "categoria": "Hamburguesas", "img": img_url("burger", "Completa"),
-                "receta": [("Medallón de carne", 2.0, "u"), ("Pan de hamburguesa", 1.0, "u"), ("Queso cheddar", 50.0, "g"), ("Lechuga", 50.0, "g"), ("Tomate perita", 1.0, "u")],
+                "receta": [("Medallón de carne", 2.0, "ud"), ("Pan de hamburguesa", 1.0, "ud"), ("Queso cheddar", 50.0, "g"), ("Lechuga", 50.0, "g"), ("Tomate perita", 1.0, "ud")],
             },
             {
                 "nombre": "Hamburguesa BBQ",
                 "descripcion": "Medallón de carne, cheddar, bacon crocante, cebolla caramelizada y salsa BBQ.",
                 "precio": 8500.0, "stock": 25,
                 "categoria": "Hamburguesas", "img": img_url("burger", "BBQ"),
-                "receta": [("Medallón de carne", 1.0, "u"), ("Pan de hamburguesa", 1.0, "u"), ("Queso cheddar", 50.0, "g"), ("Bacon", 50.0, "g"), ("Cebolla", 50.0, "g")],
+                "receta": [("Medallón de carne", 1.0, "ud"), ("Pan de hamburguesa", 1.0, "ud"), ("Queso cheddar", 50.0, "g"), ("Bacon", 50.0, "g"), ("Cebolla", 50.0, "g")],
             },
             {
                 "nombre": "Hamburguesa Veggie",
                 "descripcion": "Medallón de lentejas y quinoa, lechuga, tomate y salsa criolla.",
                 "precio": 7200.0, "stock": 20,
                 "categoria": "Hamburguesas", "img": img_url("burger", "Veggie"),
-                "receta": [("Medallón veggie", 1.0, "u"), ("Pan de hamburguesa", 1.0, "u"), ("Lechuga", 50.0, "g"), ("Tomate perita", 1.0, "u")],
+                "receta": [("Medallón veggie", 1.0, "ud"), ("Pan de hamburguesa", 1.0, "ud"), ("Lechuga", 50.0, "g"), ("Tomate perita", 1.0, "ud")],
             },
             # ── BEBIDAS ──
             {
                 "nombre": "Coca-Cola 500ml", "descripcion": "Gaseosa Coca-Cola 500ml.",
-                "precio": 1500.0, "stock": 50, "unidad": "u",
+                "precio": 1500.0, "stock": 50, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Coca-Cola 500ml"),
-                "receta": [("Coca-Cola 500ml", 1.0, "u")],
+                "receta": [("Coca-Cola 500ml", 1.0, "ud")],
             },
             {
                 "nombre": "Coca-Cola Zero 500ml", "descripcion": "Gaseosa Coca-Cola sin azúcar 500ml.",
-                "precio": 1500.0, "stock": 45, "unidad": "u",
+                "precio": 1500.0, "stock": 45, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Coca-Cola Zero"),
-                "receta": [("Coca-Cola Zero 500ml", 1.0, "u")],
+                "receta": [("Coca-Cola Zero 500ml", 1.0, "ud")],
             },
             {
                 "nombre": "Sprite 500ml", "descripcion": "Gaseosa Sprite 500ml.",
-                "precio": 1500.0, "stock": 45, "unidad": "u",
+                "precio": 1500.0, "stock": 45, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Sprite 500ml"),
-                "receta": [("Sprite 500ml", 1.0, "u")],
+                "receta": [("Sprite 500ml", 1.0, "ud")],
             },
             {
                 "nombre": "Agua mineral 500ml", "descripcion": "Agua mineral sin gas 500ml.",
-                "precio": 1200.0, "stock": 60, "unidad": "u",
+                "precio": 1200.0, "stock": 60, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Agua mineral"),
-                "receta": [("Agua mineral 500ml", 1.0, "u")],
+                "receta": [("Agua mineral 500ml", 1.0, "ud")],
             },
             {
                 "nombre": "Cerveza Quilmes 473ml", "descripcion": "Cerveza Quilmes lager 473ml.",
-                "precio": 2500.0, "stock": 40, "unidad": "u",
+                "precio": 2500.0, "stock": 40, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Quilmes"),
-                "receta": [("Cerveza Quilmes 473ml", 1.0, "u")],
+                "receta": [("Cerveza Quilmes 473ml", 1.0, "ud")],
             },
             {
                 "nombre": "Cerveza Stella Artois 473ml", "descripcion": "Cerveza Stella Artois importada 473ml.",
-                "precio": 3200.0, "stock": 35, "unidad": "u",
+                "precio": 3200.0, "stock": 35, "unidad": "ud",
                 "categoria": "Bebidas", "img": img_url("bebida", "Stella Artois"),
-                "receta": [("Cerveza Stella 473ml", 1.0, "u")],
+                "receta": [("Cerveza Stella 473ml", 1.0, "ud")],
             },
             # ── POSTRES ──
             {
@@ -432,7 +432,7 @@ def run() -> None:
                 "descripcion": "Flan casero con dulce de leche y crema.",
                 "precio": 3800.0, "stock": 18,
                 "categoria": "Postres", "img": img_url("postre", "Flan"),
-                "receta": [("Leche entera", 200.0, "mL"), ("Huevos", 2.0, "u"), ("Dulce de leche", 80.0, "g")],
+                "receta": [("Leche entera", 200.0, "mL"), ("Huevos", 2.0, "ud"), ("Dulce de leche", 80.0, "g")],
             },
             {
                 "nombre": "Cheesecake de frutos rojos",
@@ -453,7 +453,7 @@ def run() -> None:
                 "descripcion": "Volcán de chocolate amargo con centro líquido, helado y frutas.",
                 "precio": 5200.0, "stock": 10,
                 "categoria": "Postres", "img": img_url("postre", "Volcán"),
-                "receta": [("Chocolate 70%", 200.0, "g"), ("Manteca", 100.0, "g"), ("Huevos", 2.0, "u")],
+                "receta": [("Chocolate 70%", 200.0, "g"), ("Manteca", 100.0, "g"), ("Huevos", 2.0, "ud")],
             },
             # ── ENSALADAS ──
             {

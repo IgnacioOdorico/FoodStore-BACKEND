@@ -69,6 +69,32 @@ class RolRepository(BaseRepository[Rol]):
         return self.session.get(Rol, codigo)
 
 
+class RefreshTokenRepository(BaseRepository["RefreshToken"]):
+    def __init__(self, session: Session):
+        from app.modules.usuarios.model import RefreshToken
+        super().__init__(RefreshToken, session)
+
+    def get_by_hash(self, token_hash: str) -> Optional["RefreshToken"]:
+        from app.modules.usuarios.model import RefreshToken
+        return self.session.exec(
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+        ).first()
+
+    def revoke_all_for_user(self, usuario_id: int) -> None:
+        from app.modules.usuarios.model import RefreshToken
+        stmt = (
+            select(RefreshToken)
+            .where(
+                RefreshToken.usuario_id == usuario_id,
+                RefreshToken.revoked_at == None,
+            )
+        )
+        now = datetime.now(timezone.utc)
+        for token in self.session.exec(stmt).all():
+            token.revoked_at = now
+        self.session.flush()
+
+
 class UsuarioRolRepository(BaseRepository[UsuarioRol]):
     def __init__(self, session: Session):
         super().__init__(UsuarioRol, session)

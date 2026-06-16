@@ -81,23 +81,21 @@ class TestWebSocket:
 
         assert exc_info.value.code == 1008
 
-    def test_websocket_acepta_con_token(self, client: TestClient, admin_auth_headers: dict, engine_test):
+    def test_websocket_acepta_con_token(self, monkeypatch, client: TestClient, admin_auth_headers: dict, engine_test):
         """Si el usuario está autenticado, la conexión se mantiene abierta."""
         cookie_val = admin_auth_headers["Cookie"].split("=")[1]
 
-        import app.modules.pedidos.router
-        app.modules.pedidos.router.engine = engine_test
+        monkeypatch.setattr("app.core.uow.engine", engine_test)
 
         with client.websocket_connect("/api/v1/pedidos/ws", cookies={"access_token": cookie_val}) as websocket:
             websocket.send_text('{"action": "ping"}')
             assert True  # conexión abierta sin excepción
 
-    def test_websocket_subscribe_order(self, client: TestClient, admin_auth_headers: dict, engine_test):
+    def test_websocket_subscribe_order(self, monkeypatch, client: TestClient, admin_auth_headers: dict, engine_test):
         """Un admin puede suscribirse a una orden y recibir confirmación SUBSCRIBED."""
         cookie_val = admin_auth_headers["Cookie"].split("=")[1]
 
-        import app.modules.pedidos.router
-        app.modules.pedidos.router.engine = engine_test
+        monkeypatch.setattr("app.core.uow.engine", engine_test)
 
         with client.websocket_connect("/api/v1/pedidos/ws", cookies={"access_token": cookie_val}) as websocket:
             websocket.send_json({"action": "subscribe-order", "order_id": 999})
@@ -106,16 +104,13 @@ class TestWebSocket:
             assert data["data"]["order_id"] == 999
 
     def test_avanzar_estado_emite_evento_ws(
-        self, client: TestClient, session: Session, admin_auth_headers: dict, engine_test
+        self, monkeypatch, client: TestClient, session: Session, admin_auth_headers: dict, engine_test
     ):
         """
         Test de integración: crear pedido → suscribirse via WS → avanzar estado via REST
         → verificar que el evento PEDIDO_CONFIRMADO llega al socket suscrito.
         """
-        import app.modules.pedidos.router
-        import app.core.uow
-        app.modules.pedidos.router.engine = engine_test
-        app.core.uow.engine = engine_test
+        monkeypatch.setattr("app.core.uow.engine", engine_test)
 
         prod_id, forma_pago = _seed_catalogo_ws(session)
         headers_cliente = _login_cliente_ws(client)

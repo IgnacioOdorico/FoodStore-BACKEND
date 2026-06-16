@@ -223,6 +223,15 @@ class PaymentService:
         if topic not in (None, "payment", "merchant_order"):
             return {"status": "ignored", "reason": f"topic {topic}"}
 
+        # merchant_order webhooks entregan un merchant_order_id, no un payment_id.
+        # Las notificaciones de topic "payment" son más confiables y llegan por separado,
+        # así que procesamos solo payment y omitimos merchant_order.
+        if topic == "merchant_order":
+            logger.info(
+                "Ignorando merchant_order (se procesará vía payment): id=%s", pago_mp_id
+            )
+            return {"status": "ignored", "reason": "merchant_order skipped (payment topic is more reliable)"}
+
         try:
             mp_info = self._consultar_pago_mp(int(pago_mp_id))
         except RuntimeError as e:
@@ -262,7 +271,7 @@ class PaymentService:
         pago.updated_at = datetime.now(timezone.utc)
         self.uow.pagos.update(pago)
 
-        sincronizado = await self._sincronizar_pedido(pago, nuevo_estado)
+        sincronizado = self._sincronizar_pedido(pago, nuevo_estado)
         return {"status": "ok", "estado": nuevo_estado, "pedido_id": pago.pedido_id, "sincronizado": sincronizado}
 
     async def confirmar_pago(
@@ -317,7 +326,7 @@ class PaymentService:
                 pago.estado = nuevo_estado
                 pago.updated_at = datetime.now(timezone.utc)
                 self.uow.pagos.update(pago)
-                await self._sincronizar_pedido(pago, nuevo_estado)
+                self._sincronizar_pedido(pago, nuevo_estado)
 
         return PagoEstadoResponse(pedido_id=pedido_id, estado=nuevo_estado)
 
@@ -346,21 +355,28 @@ class PaymentService:
             )
         return PagoRead.model_validate(pago)
 
-    async def _sincronizar_pedido(self, pago: Pago, nuevo_estado: str) -> bool:
+    def _sincronizar_pedido(self, pago: Pago, nuevo_estado: str) -> bool:
 
-        if nuevo_estado != "aprobado":
+        if nuevo_estado not in ("aprobado", "rechazado"):
             return False
 
         pedido = self.uow.pedidos.get_by_id(pago.pedido_id)
         if not pedido or pedido.estado_codigo != "PENDIENTE":
             return False
 
+        estado_hacia = "CONFIRMADO" if nuevo_estado == "aprobado" else "CANCELADO"
+        motivo = (
+            "Pago aprobado por MercadoPago"
+            if nuevo_estado == "aprobado"
+            else "Pago rechazado por MercadoPago"
+        )
+
         from app.modules.pedidos.service import PedidoService
 
         PedidoService(self.uow).avanzar_estado(
             pedido_id=pago.pedido_id,
-            estado_hacia="CONFIRMADO",
+            estado_hacia=estado_hacia,
             usuario_id=None,
-            motivo="Pago aprobado por MercadoPago",
+            motivo=motivo,
         )
         return True

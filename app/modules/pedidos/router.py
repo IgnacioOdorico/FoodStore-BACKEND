@@ -3,12 +3,10 @@ import math
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, Query, status, WebSocket, WebSocketDisconnect
-from sqlmodel import Session
 
 from app.core.uow import UnitOfWork, get_uow
 from app.core.deps import get_current_active_user, require_role
 from app.core.security import decode_access_token
-from app.core.database import engine
 from app.modules.usuarios.schemas import UserPublic
 from app.modules.pedidos.schemas import (
     PedidoCreate,
@@ -144,17 +142,15 @@ async def _ws_handler(websocket: WebSocket, allowed_roles: set[str]) -> None:
         await websocket.close(code=1008, reason="Token inválido")
         return
 
-    with Session(engine) as db_session:
-        from app.modules.usuarios.repository import UsuarioRepository
-        repo = UsuarioRepository(db_session)
-        user = repo.get_by_email(email)
+    with UnitOfWork() as uow:
+        user = uow.usuarios.get_by_email(email)
 
         if not user:
             await websocket.accept()
             await websocket.close(code=1008, reason="Usuario no encontrado")
             return
 
-        user_roles_set: set[str] = set(repo.get_roles_codes(user.id))
+        user_roles_set: set[str] = set(uow.usuarios.get_roles_codes(user.id))
         user_id: int = user.id
 
         if not user_roles_set.intersection(allowed_roles):
@@ -188,10 +184,8 @@ async def _ws_handler(websocket: WebSocket, allowed_roles: set[str]) -> None:
 
                 is_staff = bool(user_roles_set.intersection(STAFF_ROLES))
                 if not is_staff:
-                    with Session(engine) as db_session:
-                        from app.modules.pedidos.repository import PedidoRepository
-                        pedido_repo = PedidoRepository(db_session)
-                        pedido = pedido_repo.get_by_id(order_id)
+                    with UnitOfWork() as uow:
+                        pedido = uow.pedidos.get_by_id(order_id)
 
                         if not pedido or pedido.deleted_at is not None or pedido.usuario_id != user_id:
                             await websocket.send_json({

@@ -26,6 +26,8 @@ class Pago(SQLModel, table=True):
     external_reference: str = Field(max_length=100, unique=True, nullable=False)
     idempotency_key: str = Field(max_length=100, unique=True, nullable=False)
 
+    deleted_at: Optional[datetime] = Field(default=None)
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = Field(default=None)
 

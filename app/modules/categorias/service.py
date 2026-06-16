@@ -9,6 +9,7 @@ from app.modules.categorias.schemas import (
     CategoriaCreate,
     CategoriaUpdate,
     CategoriaPublic,
+    PaginatedCategorias,
 )
 
 
@@ -17,10 +18,15 @@ class CategoriaService:
     def __init__(self, uow: UnitOfWork):
         self.uow = uow
 
-    def list_all(self, parent_id: Optional[int] = None) -> List[CategoriaPublic]:
-        """Lista todas las categorías activas. Filtra por parent_id si se pasa."""
-        categorias = self.uow.categorias.list_active(parent_id=parent_id)
-        return [CategoriaPublic.model_validate(c) for c in categorias]
+    def list_all(self, parent_id: Optional[int] = None, *, skip: int = 0, limit: int = 100) -> PaginatedCategorias:
+        categorias = self.uow.categorias.list_active(parent_id=parent_id, offset=skip, limit=limit)
+        total = self.uow.categorias.count_active(parent_id=parent_id)
+        return PaginatedCategorias(
+            items=[CategoriaPublic.model_validate(c) for c in categorias],
+            total=total,
+            skip=skip,
+            limit=limit,
+        )
 
     def get_by_id(self, categoria_id: int) -> CategoriaPublic:
         categoria = self.uow.categorias.get_by_id(categoria_id)

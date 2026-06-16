@@ -30,6 +30,10 @@ class Token(SQLModel):
     expires_in: int
 
 
+class TokenConRefresh(Token):
+    refresh_token: str
+
+
 class LoginRequest(SQLModel):
     email: str
     password: str
