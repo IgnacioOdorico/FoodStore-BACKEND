@@ -226,7 +226,7 @@ pytest tests/integration/
 
 ---
 
-## Demo en Video
+## Video demo final
 
 [Ver Video de Demostración](https://youtu.be/IghWtxwE6Ts)
 
